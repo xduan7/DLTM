@@ -15,7 +15,7 @@ import torch.utils.data as data
 from sklearn.model_selection import train_test_split
 
 from util.data_processing.masking import mask
-from util.data_processing.smiles_encoding import encode_smiles
+from util.data_processing.tokenization import tokenize_smiles
 
 
 logger = logging.getLogger(__name__)
@@ -30,8 +30,8 @@ class SMILESDataset(data.Dataset):
             training: bool,
             rand_state: int = 0,
 
-            seq_len: int = 150,
-            encoding_on: str = 'atom',
+            max_seq_len: int = 150,
+            tokenize_on: str = 'atom',
             sos_char: str = '<',
             eos_char: str = '>',
             pad_char: str = ' ',
@@ -48,14 +48,14 @@ class SMILESDataset(data.Dataset):
 
         # Encode the SMILES strings
         smiles, encode_dict, encoded = \
-            encode_smiles(smiles=smiles,
-                          seq_len=seq_len,
-                          encoding_on=encoding_on,
-                          sos_char=sos_char,
-                          eos_char=eos_char,
-                          pad_char=pad_char,
-                          mask_char=mask_char,
-                          data_root=data_root)
+            tokenize_smiles(smiles=smiles,
+                            max_seq_len=max_seq_len,
+                            tokenize_on=tokenize_on,
+                            sos_char=sos_char,
+                            eos_char=eos_char,
+                            pad_char=pad_char,
+                            mask_char=mask_char,
+                            data_root=data_root)
 
         # Mask encoded smile strings (1 mask per string)
         masked_indices, masked_values, masked_encoded = \

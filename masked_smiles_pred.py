@@ -143,7 +143,7 @@ def main():
         SMILESDataset(data_root='./data/',
                       training=True,
                       rand_state=args.rand_state,
-                      seq_len=args.seq_length,
+                      max_seq_len=args.seq_length,
                       val_ratio=args.validation_ratio),
         batch_size=args.trn_batch_size, **dataloader_kwargs)
 
@@ -151,7 +151,7 @@ def main():
         SMILESDataset(data_root='./data/',
                       training=False,
                       rand_state=args.rand_state,
-                      seq_len=args.seq_length,
+                      max_seq_len=args.seq_length,
                       val_ratio=args.validation_ratio),
         batch_size=args.trn_batch_size, **dataloader_kwargs)
 

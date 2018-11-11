@@ -22,13 +22,16 @@ def download_files(file_names: str or iter,
                    target_dir: str,
                    ftp_root: str = FTP_ROOT):
     """download_files(['some', 'file', 'names'], './data/, 'ftp://some-server')
+
     This function download one or more files from given FTP server to target
     folder. Note that the file names wil be the same with FTP server.
+
     Args:
         file_names (str or iter): a string of filename or an iterable structure
             of multiple file names for downloading.
         target_dir (str): target folder for storing downloaded data.
         ftp_root (str): address for FTP server.
+
     Returns:
         None
     """

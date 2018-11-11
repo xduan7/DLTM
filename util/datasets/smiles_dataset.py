@@ -14,9 +14,8 @@ import pandas as pd
 import torch.utils.data as data
 from sklearn.model_selection import train_test_split
 
-from util.data_processing.masking import mask
+from util.data_processing.sentence_masking import mask_sentences
 from util.data_processing.tokenization import tokenize_smiles
-
 
 logger = logging.getLogger(__name__)
 
@@ -38,16 +37,31 @@ class SMILESDataset(data.Dataset):
             mask_char: str = '?',
 
             val_ratio: float = 0.1):
+        """
+
+
+
+        Args:
+            data_root:
+            training:
+            rand_state:
+            max_seq_len:
+            tokenize_on:
+            sos_char:
+            eos_char:
+            pad_char:
+            mask_char:
+            val_ratio:
+        """
 
         self.__rand_state = rand_state
 
-        # Get the SMILES strings from dataframe
-        data_path = os.path.join(data_root,
-                                 'dtc.train.filtered.txt')
+        # Get the SMILES strings from file
+        data_path = os.path.join(data_root, 'dtc.train.filtered.txt')
         smiles = pd.read_csv(data_path, sep='\t')['smiles'].unique()
 
-        # Encode the SMILES strings
-        smiles, encode_dict, encoded = \
+        # Index the SMILES strings (making it numeric with tokenization dict)
+        smiles, token_dict, indexed = \
             tokenize_smiles(smiles=smiles,
                             max_seq_len=max_seq_len,
                             tokenize_on=tokenize_on,
@@ -57,53 +71,73 @@ class SMILESDataset(data.Dataset):
                             mask_char=mask_char,
                             data_root=data_root)
 
-        # Mask encoded smile strings (1 mask per string)
-        masked_indices, masked_values, masked_encoded = \
-            mask(original_str=smiles,
-                 encoded_str=encoded,
-                 mask_value=encode_dict[mask_char],
-                 rand_state=rand_state)
+        # This might save some ram and processing time
+        indexed = np.array(indexed).astype(np.uint8)
 
-        # Train/test split
-        trn_encoded, val_encoded, \
-            trn_masked_encoded, val_masked_encoded, \
-            trn_masked_indices, val_masked_indices, \
-            trn_masked_values, val_masked_values = \
-            train_test_split(encoded,
-                             masked_encoded,
-                             masked_indices,
+        # Mask encoded smile strings (1 mask per string)
+        masked_values, masked = \
+            mask_sentences(mask=token_dict[mask_char],
+                           sentences=smiles,
+                           indexed_sentences=indexed,
+                           rand_state=rand_state)
+
+        # Train/test split the masked SMILES strings and targets
+        trn_data, val_data, trn_target, val_target = \
+            train_test_split(masked,
                              masked_values,
                              test_size=val_ratio,
                              random_state=self.__rand_state,
                              shuffle=True)
 
-        self.encode_dict = encode_dict
+        # Save everything useful into private variables
+        self.token_dict = token_dict
         if training:
-            self.__encoded = trn_encoded
-            self.__masked_encoded = trn_masked_encoded
-            self.__masked_indices = trn_masked_indices
-            self.__masked_values = trn_masked_values
+            self.__data = trn_data
+            self.__target = trn_target
         else:
-            self.__encoded = val_encoded
-            self.__masked_encoded = val_masked_encoded
-            self.__masked_indices = val_masked_indices
-            self.__masked_values = val_masked_values
+            self.__data = val_data
+            self.__target = val_target
 
-        self.__encoded = np.array(self.__encoded).astype(np.int64)
-        self.__masked_encoded = \
-            np.array(self.__masked_encoded).astype(np.int64)
-        self.__pad_mask = np.array(
-            (self.__encoded != self.encode_dict[pad_char])).astype(np.int64)
-        self.__masked_values = np.array(self.__masked_values).astype(np.int64)
+        # Create a mask for padding characters in each SMILES string
+        self.__padding_mask = np.array(
+            (self.__data != self.token_dict[pad_char])).astype(np.int64)
 
-        self.__len = len(self.__encoded)
+        # Convert the data and target type to int64 to work with PyTorch
+        self.__data = np.array(self.__data).astype(np.int64)
+        self.__target = np.array(self.__target).astype(np.int64)
+
+        self.__len = len(self.__data)
 
     def __len__(self):
+        """len(dataset)
+
+        Returns:
+            int: length of this dataset
+        """
         return self.__len
 
     def __getitem__(self, index):
-        return self.__pad_mask[index], self.__masked_encoded[index], \
-               self.__masked_values[index]
+        """mask, data, target = dataset[0]
+
+        This function returns the padding mask, data, and target
+        corresponding to a certain index.
+
+        Note that every element is of type np.int64, which feeds into
+        PyTorch embedding layer.
+
+        Args:
+            index (int): index of the data.
+
+        Returns:
+            (
+                np.array: padding mask (0 means padding)
+                np.array: numeric SMILES string with all the special
+                    characters and the masked element to be predicted
+                np.array: actual value under the mask for prediction target
+            )
+        """
+        return self.__padding_mask[index], \
+               self.__data[index], self.__target[index]
 
 
 if __name__ == '__main__':

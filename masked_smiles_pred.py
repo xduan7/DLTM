@@ -156,7 +156,7 @@ def main():
         batch_size=args.trn_batch_size, **dataloader_kwargs)
 
     # Model and optimizer
-    dict_size = len(trn_loader.dataset.encode_dict)
+    dict_size = len(trn_loader.dataset.token_dict)
     encoder = Encoder(dict_size=dict_size,
                       seq_length=args.seq_length,
 

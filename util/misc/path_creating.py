@@ -12,6 +12,16 @@ import os
 
 
 def create_path(path: str):
+    """create_path('../../some_path')
+
+    This function tries to create a directory if it does not exist.
+
+    Args:
+        path (str): string for path/dir to be created.
+
+    Returns:
+        None
+    """
     try:
         os.makedirs(path)
     except FileExistsError:

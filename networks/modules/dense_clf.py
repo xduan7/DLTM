@@ -64,7 +64,7 @@ class DenseClf(nn.Module):
         print(x.size)
 
         # Apply mask if available
-        if mask:
+        if mask is not None:
             print(mask.size)
             print(mask.unsqueeze(-1).unsqueeze(-2).size)
             x = x.masked_fill(mask.unsqueeze(-1).unsqueeze(-2) == 0, -1e9)

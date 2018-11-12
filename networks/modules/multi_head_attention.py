@@ -24,7 +24,7 @@ def attention(query: torch.Tensor,
     scores = torch.matmul(query, key.transpose(-2, -1)) \
              / math.sqrt(query.size(-1))
 
-    if mask:
+    if mask is not None:
         mask = mask.unsqueeze(-1)
         scores = scores.masked_fill(mask == 0, -1e9)
 

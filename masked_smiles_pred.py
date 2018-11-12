@@ -13,7 +13,6 @@ import argparse
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import torch.optim as optim
 
 import numpy as np
 from torch.optim.lr_scheduler import LambdaLR
@@ -30,7 +29,7 @@ def train(clf, device, trn_loader, optimizer, num_logs_per_epoch):
     clf.train()
     num_batches_per_log = np.floor(len(trn_loader) / num_logs_per_epoch)
 
-    log_loss = 0.
+    recorded_loss = 0.
 
     for batch_index, (mask, data, target) in enumerate(trn_loader):
 
@@ -43,13 +42,13 @@ def train(clf, device, trn_loader, optimizer, num_logs_per_epoch):
         loss.backward()
         optimizer.step()
 
-        log_loss += loss.item()
+        recorded_loss += loss.item()
 
         if (batch_index + 1) % num_batches_per_log == 0:
-            print('\t %.2f \t Loss: %.4f'
+            print('\t Progress: %.1f%% \t Loss: %.4f'
                   % (100. * (batch_index + 1) / len(trn_loader),
-                     log_loss / num_logs_per_epoch))
-            log_loss = 0.
+                     recorded_loss / num_batches_per_log))
+            recorded_loss = 0.
 
 
 def validate(clf, device, val_loader):
@@ -67,7 +66,7 @@ def validate(clf, device, val_loader):
                 mask.to(device), data.to(device), target.to(device)
 
             output = clf(data, mask)
-            loss = F.nll_loss(output, target)
+            loss = F.nll_loss(output, target, reduction='sum').item()
 
             val_loss += loss.item()
             prediction = output.max(1, keepdim=True)[1]
@@ -75,11 +74,14 @@ def validate(clf, device, val_loader):
                 prediction.eq(target.view_as(prediction)).sum().item()
 
     val_loss /= len(val_loader.dataset)
+    val_acc = val_correct / len(val_loader.dataset)
+
     print('\nValidation Results: \n'
           '\t Average loss: %.4f, '
-          '\t Accuracy: %6i/%6i (%.1f)\n'
-          % (val_loss, val_correct, len(val_loader.dataset),
-             100. * val_correct / len(val_loader.dataset)))
+          '\t Accuracy: %6i/%6i (%.1f%%)\n'
+          % (val_loss, val_correct, len(val_loader.dataset), 100. * val_acc))
+
+    return val_acc
 
 
 def main():
@@ -92,15 +94,15 @@ def main():
                         help='max length for training/testing SMILES strings')
     parser.add_argument('--pos_freq', type=float, default=4.0,
                         help='frequency for positional encoding')
-    parser.add_argument('--embedding_scale', type=float, default=16.0,
+    parser.add_argument('--embedding_scale', type=float, default=24.0,
                         help='scale of word embedding to positional encoding')
-    parser.add_argument('--embedding_dim', type=int, default=256,
+    parser.add_argument('--embedding_dim', type=int, default=512,
                         help='embedding and model dimension')
     parser.add_argument('--num_layers', type=int, default=6,
                         help='number of encoding layers in encoder')
     parser.add_argument('--num_heads', type=int, default=8,
                         help='number of heads in multi-head attention layer')
-    parser.add_argument('--ff_mid_dim', type=int, default=128,
+    parser.add_argument('--ff_mid_dim', type=int, default=512,
                         help='dimension of mid layer in feed forward module')
 
     parser.add_argument('--pe_dropout', type=float, default=0.1,
@@ -121,7 +123,7 @@ def main():
                         help='ratio of validation dataset over all data')
     parser.add_argument('--max_num_epochs', type=int, default=100,
                         help='maximum number of epochs for training')
-    parser.add_argument('--optimizer', type=str, default='Adam',
+    parser.add_argument('--optimizer', type=str, default='SGD',
                         help='optimizer for transformer encoder training',
                         choices=['SGD', 'RMSprop', 'Adam'])
     parser.add_argument('--lr', type=float, default=0.001,
@@ -130,8 +132,11 @@ def main():
                         help='L2 regularization for nn weights')
     parser.add_argument('--lr_decay_factor', type=float, default=0.95,
                         help='decay factor for learning rate')
-    parser.add_argument('--num_logs_per_epoch', type=int, default=8,
+    parser.add_argument('--num_logs_per_epoch', type=int, default=5,
                         help='number of logs per epoch during training')
+    parser.add_argument('--early_stop_patience', type=int, default=10,
+                        help='number of epochs for early stopping if no '
+                             'improvement')
 
     # Miscellaneous config ####################################################
     parser.add_argument('--no-cuda', action='store_true', default=False,
@@ -153,7 +158,7 @@ def main():
     dataloader_kwargs = {
         'timeout': 1,
         'shuffle': 'True',
-        'num_workers': 4 if use_cuda else 0,
+        'num_workers': 8 if use_cuda else 0,
         'pin_memory': True if use_cuda else False, }
 
     trn_loader = torch.utils.data.DataLoader(
@@ -174,6 +179,8 @@ def main():
 
     # Model and optimizer
     dict_size = len(trn_loader.dataset.token_dict)
+
+    # Using
     encoder = Encoder(dict_size=dict_size,
                       seq_length=args.seq_length,
 
@@ -203,15 +210,28 @@ def main():
                         lr_lambda=lambda e:
                         args.lr_decay_factor ** e)
 
+    best_acc = 0.0
+    patience = 0
+
     for epoch in range(1, args.max_num_epochs + 1):
 
-        print('Epoch %3i' % epoch)
+        print('Epoch %3i: ' % epoch)
 
         train(clf, device, trn_loader, optimizer, args.num_logs_per_epoch)
-        validate(clf, device, val_loader)
+        val_acc = validate(clf, device, val_loader)
+
+        if val_acc > best_acc:
+            best_acc = val_acc
+            patience = 0
+        else:
+            patience += 1
+
+        if patience >= args.early_stop_patience:
+            break
 
         lr_decay.step(epoch)
 
+    print('Best Accuracy: %.2f%%' % (100. * best_acc))
 
-if __name__ == '__main__':
-    main()
+
+main()

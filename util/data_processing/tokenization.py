@@ -179,7 +179,7 @@ if __name__ == '__main__':
 
     # Index SMILES strings
     list_smiles, token_dict, list_indexed_smiles = \
-        tokenize_smiles(df['smiles'].unique(), 128, 'atom', d_root)
+        tokenize_smiles(df['smiles'].unique(), 128, 'atom')
 
     print(list_smiles[0])
     print(list_indexed_smiles[0])

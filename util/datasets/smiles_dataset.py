@@ -141,5 +141,8 @@ class SMILESDataset(data.Dataset):
 
 
 if __name__ == '__main__':
+
     dataset = SMILESDataset('../../data/', True, rand_state=0)
-    print(dataset[-1])
+    m, d, t = dataset[-1]
+
+    print(np.multiply(m, d))

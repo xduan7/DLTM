@@ -71,11 +71,12 @@ if __name__ == '__main__':
 
     plt.figure(figsize=(24, 8))
 
-    seq_len = 150
-    dim = 16
+    seq_len = 128
+    dim = 32
+    freq = 8.0
 
     batch_input = Variable(torch.zeros(1, seq_len, dim)).cuda()
-    pe = PositionalEncoder(seq_len, dim).cuda()
+    pe = PositionalEncoder(seq_len, dim, base_feq=freq).cuda()
     batch_output = pe.forward(batch_input).cpu()
     plt.plot(np.arange(seq_len), batch_output[0, :, :].data.numpy())
 

@@ -59,11 +59,10 @@ class Encoder(nn.Module):
         self.__output_norm = nn.LayerNorm(normalized_shape=emb_dim,
                                           eps=epsilon)
 
-    def forward(self, encoded_input, mask):
+    def forward(self, indexed_sentences, mask):
 
-        x = self.__positional_encoder(self.__embedding(encoded_input))
-
-        for encoder_layers in self.__encoder_layers:
-            x = encoder_layers(x, mask)
+        x = self.__positional_encoder(self.__embedding(indexed_sentences))
+        for encoder_layer in self.__encoder_layers:
+            x = encoder_layer(x, mask)
 
         return self.__output_norm(x)

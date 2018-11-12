@@ -7,68 +7,79 @@
     File Description:   
 
 """
-
-import argparse
 import json
+import argparse
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 
+import numpy as np
+from torch.optim.lr_scheduler import LambdaLR
+
+from networks.encoder_clf import EncoderClf
 from networks.modules.encoder import Encoder
 from util.datasets.smiles_dataset import SMILESDataset
+from util.misc.optimizer import get_optimizer
 from util.misc.rand_state_seeding import seed_random_state
 
 
-def train(encoder, clf, device, train_loader, optimizer, epoch):
+def train(clf, device, trn_loader, optimizer, num_logs_per_epoch):
 
-    encoder.train()
     clf.train()
+    num_batches_per_log = np.floor(len(trn_loader) / num_logs_per_epoch)
 
-    for batch_idx, (mask, masked, value) in enumerate(train_loader):
-        mask, masked, value = \
-            mask.to(device), masked.to(device), value.to(device)
+    log_loss = 0.
+
+    for batch_index, (mask, data, target) in enumerate(trn_loader):
+
+        mask, data, target = \
+            mask.to(device), data.to(device), target.to(device)
+
         optimizer.zero_grad()
-        temp = encoder(masked, mask.unsqueeze(-2))
-        output = clf(temp.view(value.size(0), -1))
-        output = F.log_softmax(output, dim=-1)
-
-        loss = F.nll_loss(output, value)
+        output = clf(data, mask)
+        loss = F.nll_loss(output, target)
         loss.backward()
         optimizer.step()
 
-        if batch_idx % 100 == 0:
-            print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
-                epoch, batch_idx * len(masked), len(train_loader.dataset),
-                100. * batch_idx / len(train_loader), loss.item()))
+        log_loss += loss.item()
+
+        if (batch_index + 1) % num_batches_per_log == 0:
+            print('\t %.2f \t Loss: %.4f'
+                  % (100. * (batch_index + 1) / len(trn_loader),
+                     log_loss / num_logs_per_epoch))
+            log_loss = 0.
 
 
-def test(encoder, clf, device, test_loader):
+def validate(clf, device, val_loader):
 
-    encoder.eval()
     clf.eval()
 
-    test_loss = 0
-    correct = 0
+    val_loss = 0.
+    val_correct = 0
+
     with torch.no_grad():
-        for mask, masked, value in test_loader:
-            mask, masked, value = \
-                mask.to(device), masked.to(device), value.to(device)
 
-            temp = encoder(masked, mask.unsqueeze(-2))
-            output = clf(temp.view(value.size(0), -1))
-            output = F.log_softmax(output, dim=-1)
-            test_loss += F.nll_loss(output,
-                                    value,
-                                    reduction='sum').item()
-            pred = output.max(1, keepdim=True)[1]
-            correct += pred.eq(value.view_as(pred)).sum().item()
+        for mask, data, target in val_loader:
 
-    test_loss /= len(test_loader.dataset)
-    print('\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n'.format(
-        test_loss, correct, len(test_loader.dataset),
-        100. * correct / len(test_loader.dataset)))
+            mask, data, target = \
+                mask.to(device), data.to(device), target.to(device)
+
+            output = clf(data, mask)
+            loss = F.nll_loss(output, target)
+
+            val_loss += loss.item()
+            prediction = output.max(1, keepdim=True)[1]
+            val_correct += \
+                prediction.eq(target.view_as(prediction)).sum().item()
+
+    val_loss /= len(val_loader.dataset)
+    print('\nValidation Results: \n'
+          '\t Average loss: %.4f, '
+          '\t Accuracy: %6i/%6i (%.1f)\n'
+          % (val_loss, val_correct, len(val_loader.dataset),
+             100. * val_correct / len(val_loader.dataset)))
 
 
 def main():
@@ -79,13 +90,13 @@ def main():
     # Encoder parameters ######################################################
     parser.add_argument('--seq_length', type=int, default=128,
                         help='max length for training/testing SMILES strings')
-    parser.add_argument('--pos_freq', type=float, default=100.0,
+    parser.add_argument('--pos_freq', type=float, default=4.0,
                         help='frequency for positional encoding')
     parser.add_argument('--embedding_scale', type=float, default=16.0,
                         help='scale of word embedding to positional encoding')
-    parser.add_argument('--embedding_dim', type=int, default=32,
+    parser.add_argument('--embedding_dim', type=int, default=256,
                         help='embedding and model dimension')
-    parser.add_argument('--num_layers', type=int, default=4,
+    parser.add_argument('--num_layers', type=int, default=6,
                         help='number of encoding layers in encoder')
     parser.add_argument('--num_heads', type=int, default=8,
                         help='number of heads in multi-head attention layer')
@@ -115,6 +126,12 @@ def main():
                         choices=['SGD', 'RMSprop', 'Adam'])
     parser.add_argument('--lr', type=float, default=0.001,
                         help='learning rate of the optimizer')
+    parser.add_argument('--l2_regularization', type=float, default=1e-5,
+                        help='L2 regularization for nn weights')
+    parser.add_argument('--lr_decay_factor', type=float, default=0.95,
+                        help='decay factor for learning rate')
+    parser.add_argument('--num_logs_per_epoch', type=int, default=8,
+                        help='number of logs per epoch during training')
 
     # Miscellaneous config ####################################################
     parser.add_argument('--no-cuda', action='store_true', default=False,
@@ -172,26 +189,28 @@ def main():
                       mha_dropout=args.mha_dropout,
                       ff_dropout=args.ff_dropout,
                       enc_dropout=args.enc_dropout).to(device)
+    output_layer = nn.Sequential(
+        nn.Linear(args.embedding_dim * args.seq_length, dict_size)).to(device)
 
-    clf = nn.Sequential(nn.Linear(args.embedding_dim * args.seq_length,
-                                  dict_size)).to(device)
+    clf = EncoderClf(encoder=encoder, output_module=output_layer)
 
-    for p in encoder.parameters():
-        if p.dim() > 1:
-            nn.init.xavier_uniform_(p)
+    optimizer = get_optimizer(opt_type=args.optimizer,
+                              networks=clf,
+                              learning_rate=args.lr,
+                              l2_regularization=args.l2_regularization)
 
-    parameters = list(encoder.parameters()) + list(clf.parameters())
-
-    if args.optimizer == 'SGD':
-        optimizer = optim.SGD(parameters, lr=args.lr)
-    elif args.optimizer == 'RMSprop':
-        optimizer = optim.RMSprop(parameters, lr=args.lr)
-    else:
-        optimizer = optim.Adam(parameters, lr=args.lr)
+    lr_decay = LambdaLR(optimizer=optimizer,
+                        lr_lambda=lambda e:
+                        args.lr_decay_factor ** e)
 
     for epoch in range(1, args.max_num_epochs + 1):
-        train(encoder, clf, device, trn_loader, optimizer, epoch)
-        test(encoder, clf, device, val_loader)
+
+        print('Epoch %3i' % epoch)
+
+        train(clf, device, trn_loader, optimizer, args.num_logs_per_epoch)
+        validate(clf, device, val_loader)
+
+        lr_decay.step(epoch)
 
 
 if __name__ == '__main__':

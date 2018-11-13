@@ -19,8 +19,15 @@ if __name__ == '__main__':
 
     param_dict_list = [
 
-        # Test out freq vs performance
+        # Baseline ############################################################
         {'pos_freq': '4.0',
+         'embedding_scale': '16.0',
+         'embedding_dim': '128',
+         'num_layers': '6',
+         'num_heads': '8', },
+
+        # Test out freq vs performance ########################################
+        {'pos_freq': '2.0',
          'embedding_scale': '16.0',
          'embedding_dim': '128',
          'num_layers': '6',
@@ -32,11 +39,46 @@ if __name__ == '__main__':
          'num_layers': '6',
          'num_heads': '8', },
 
-        {'pos_freq': '16.0',
+        # Test out dimension vs performance ###################################
+        {'pos_freq': '4.0',
          'embedding_scale': '16.0',
-         'embedding_dim': '128',
+         'embedding_dim': '64',
          'num_layers': '6',
-         'num_heads': '8', }, ]
+         'num_heads': '8', },
+
+        {'pos_freq': '4.0',
+         'embedding_scale': '16.0',
+         'embedding_dim': '256',
+         'num_layers': '6',
+         'num_heads': '8', },
+
+        # # Number of layers vs performance #####################################
+        # {'pos_freq': '4.0',
+        #  'embedding_scale': '16.0',
+        #  'embedding_dim': '128',
+        #  'num_layers': '3',
+        #  'num_heads': '8', },
+        #
+        # {'pos_freq': '4.0',
+        #  'embedding_scale': '16.0',
+        #  'embedding_dim': '128',
+        #  'num_layers': '12',
+        #  'num_heads': '8', },
+        #
+        # # Number of heads vs performance ######################################
+        # {'pos_freq': '4.0',
+        #  'embedding_scale': '16.0',
+        #  'embedding_dim': '128',
+        #  'num_layers': '6',
+        #  'num_heads': '4', },
+        #
+        # {'pos_freq': '4.0',
+        #  'embedding_scale': '16.0',
+        #  'embedding_dim': '128',
+        #  'num_layers': '6',
+        #  'num_heads': '16', },
+
+    ]
 
     for param_dict in param_dict_list:
 
@@ -69,13 +111,14 @@ if __name__ == '__main__':
             '--trn_batch_size', '32',
             '--val_batch_size', '256',
             '--validation_ratio', '0.1',
-            '--max_num_epochs', '100',
+            '--max_num_epochs', '500',
 
-            '--optimizer', 'SGD',
-            '--lr', '0.001',
+            '--optimizer', 'Adam',
+            '--lr', '0.0002',
             '--l2_regularization', '1e-5',
             '--lr_decay_factor', '0.95',
             '--num_logs_per_epoch', '5',
+            '--early_stop_patience', '10',
 
             # Miscellaneous config ############################################
             '--rand_state', '0', ]

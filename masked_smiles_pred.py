@@ -68,7 +68,7 @@ def validate(clf, device, val_loader):
             output = clf(data, mask)
             loss = F.nll_loss(output, target, reduction='sum').item()
 
-            val_loss += loss.item()
+            val_loss += loss
             prediction = output.max(1, keepdim=True)[1]
             val_correct += \
                 prediction.eq(target.view_as(prediction)).sum().item()

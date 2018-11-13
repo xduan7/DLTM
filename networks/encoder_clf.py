@@ -10,11 +10,13 @@
 import torch.nn as nn
 import torch.nn.functional as F
 
+from networks.modules.encoder import Encoder
+
 
 class EncoderClf(nn.Module):
 
     def __init__(self,
-                 encoder: nn.Module,
+                 encoder: Encoder,
                  output_module: nn.Module):
 
         super().__init__()

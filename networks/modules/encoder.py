@@ -26,12 +26,12 @@ class Encoder(nn.Module):
                  emb_dim: int,
                  num_layers: int,
                  num_heads: int,
-                 ff_mid_dim: int = 1024,
+                 ff_mid_dim: int,
 
-                 pe_dropout: float = 0.1,
-                 mha_dropout: float = 0.1,
-                 ff_dropout: float = 0.1,
-                 enc_dropout: float = 0.1,
+                 pe_dropout: float = 0.0,
+                 mha_dropout: float = 0.0,
+                 ff_dropout: float = 0.0,
+                 enc_dropout: float = 0.0,
 
                  epsilon: float = 1e-6):
 
@@ -59,10 +59,10 @@ class Encoder(nn.Module):
         self.__output_norm = nn.LayerNorm(normalized_shape=emb_dim,
                                           eps=epsilon)
 
-    def forward(self, indexed_sentences, mask):
+    def forward(self, src_indexed_sentence, src_mask):
 
-        x = self.__positional_encoder(self.__embedding(indexed_sentences))
+        h = self.__positional_encoder(self.__embedding(src_indexed_sentence))
         for encoder_layer in self.__encoder_layers:
-            x = encoder_layer(x, mask)
+            h = encoder_layer(h, src_mask)
 
-        return self.__output_norm(x)
+        return self.__output_norm(h)

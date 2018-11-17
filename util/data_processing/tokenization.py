@@ -16,8 +16,9 @@ import numpy as np
 from util.misc.path_creating import create_path
 
 
-def tokenize_smiles(
-        smiles: iter,
+def tokenize(
+        data_name: str,
+        sentences: iter,
         max_seq_len: int,
         tokenize_on: str = 'atom',
 
@@ -27,9 +28,10 @@ def tokenize_smiles(
         mask_char: str = '?',
 
         data_root: str = '../../data/'):
-    """smiles, tokens, indexed = tokenize_smiles(smiles_strings, 120)
+    """sentences, token_dict, indexed_sentences = \
+        tokenize('name', strings, 120)
 
-    This function tokenizes a series of SMILES strings based either on
+    This function tokenizes a series of strings based either on
     characters or atoms/bonds, with the special characters specified.
 
     WARNING: due to the special way of processing atoms, this encoding
@@ -37,11 +39,12 @@ def tokenize_smiles(
     when you have aromaticity rings in some format).
 
     WARNING: also users should make sure that non of these special chars are
-    used in SMILES strings. Recommend using the default values.
+    used in sentences. Recommend using the default values.
 
     Args:
-        smiles (iter): a iterable structure of SMILES strings (type: str)
-        max_seq_len (int): the maximum length of the SMILES strings allowed
+        data_name (str): name of this dataset
+        sentences (iter): a iterable structure of sentences (type: str)
+        max_seq_len (int): the maximum length of the sentences allowed
             for tokenization (including special chars like SOS and EOS)
         tokenize_on (str): tokenization strategy. Choose between 'atom'
             (tokenize on atoms/bonds)and 'char' (tokenize on characters)
@@ -55,9 +58,9 @@ def tokenize_smiles(
 
     Returns:
         (
-            list: list of SMILES strings with valid length but no padding
-            dict: tokenization dictionary for SMILES -> numbers
-            list: list of indexed (numeric) SMILES strings with padding
+            list: list of sentences with valid length but no padding
+            dict: tokenization dictionary for words -> numbers
+            list: list of indexed (numeric) sentences with padding
                 and valid length
         )
     """
@@ -70,34 +73,36 @@ def tokenize_smiles(
     # Get the tokenization dictionary #########################################
     # Path (with file name) for tokenization dictionary
     dict_path = os.path.join(
-        data_root, 'SMILES_%s_token_dict.json' % tokenize_on)
+        data_root, '%s_%s_token_dict.json' % (data_name, tokenize_on))
 
     # Load the tokenization dictionary if it exists already
     if os.path.exists(dict_path):
         with open(dict_path, 'r') as f:
             token_dict = json.load(f)
 
-    # Iterate through all the SMILES and generates tokenization dictionary
+    # Iterate through all the sentences and generates tokenization dictionary
     else:
 
-        # Create encoding dictionary for SMILES strings based on strategy
+        # Create encoding dictionary for words based on strategy
         # Note that all the token are sorted before putting into dictionary
         if tokenize_on == 'char':
 
-            # Collect all the characters in SMILES strings
-            # Make sure that all the special characters are included
-            chars = list(set.union(*[set(s) for s in smiles]).union(
-                # Make sure that all the special characters are included
-                {sos_char, eos_char, pad_char, mask_char}))
+            if mask_char:
+                chars = list(set.union(*[set(s) for s in sentences]).union(
+                    {sos_char, eos_char, pad_char, mask_char}))
+            else:
+                chars = list(set.union(*[set(s) for s in sentences]).union(
+                    {sos_char, eos_char, pad_char}))
 
             token_dict = dict((c, i) for i, c in enumerate(sorted(chars)))
 
         else:
-            # Collect all the atoms and bonds in SMILES strings
-            # Make sure that all the special characters are included
-            dict_keys = {sos_char, eos_char, pad_char, mask_char}
+            if mask_char:
+                dict_keys = {sos_char, eos_char, pad_char, mask_char}
+            else:
+                dict_keys = {sos_char, eos_char, pad_char, }
 
-            for s in smiles:
+            for s in sentences:
                 for i in range(len(s)):
 
                     # All lower-case letters are the last letter of an atom
@@ -115,29 +120,29 @@ def tokenize_smiles(
         with open(dict_path, 'w') as f:
             json.dump(token_dict, f, indent=4, separators=(',', ': '))
 
-    # Index SMILE strings #####################################################
-    indexed_smiles_path = os.path.join(
-        data_root, 'indexed_SMILES_%s.pkl' % tokenize_on)
+    # Index sentences #########################################################
+    indexed_sentences_file_path = os.path.join(
+        data_root, 'indexed_%s_%s.pkl' % (data_name, tokenize_on))
 
     # Load the indexed SMILES strings if exist
-    if os.path.exists(indexed_smiles_path):
-        with open(indexed_smiles_path, 'rb') as f:
-            indexed_smiles = pickle.load(f)
+    if os.path.exists(indexed_sentences_file_path):
+        with open(indexed_sentences_file_path, 'rb') as f:
+            indexed_sentences = pickle.load(f)
 
     else:
-        smiles_ = [(sos_char + s + eos_char) for s in smiles]
+        sentences_ = [(sos_char + s + eos_char) for s in sentences]
 
-        # Index (numeric) the SMILES strings differently from strategy
+        # Index (numeric) the sentences differently from strategy
         if tokenize_on == 'char':
-            indexed_smiles = [[token_dict[c] for c in s]
-                              for s in smiles_]
+            indexed_sentences = [[token_dict[c] for c in s]
+                                 for s in sentences_]
 
         else:
             # Get all the atoms and symbols in the iterable of SMILES strings
             # Todo: some optimization here?
-            indexed_smiles = []
+            indexed_sentences = []
 
-            for s in smiles_:
+            for s in sentences_:
 
                 indexed_s = []
 
@@ -151,21 +156,21 @@ def tokenize_smiles(
                     elif not s[i].islower():
                         indexed_s.append(token_dict[s[i]])
 
-                indexed_smiles.append(indexed_s)
+                indexed_sentences.append(indexed_s)
 
-        # Save indexed (numeric) SMILES strings into the path
-        with open(indexed_smiles_path, 'wb') as f:
-            pickle.dump(indexed_smiles, f)
+        # Save indexed (numeric) sentences into the path
+        with open(indexed_sentences_file_path, 'wb') as f:
+            pickle.dump(indexed_sentences, f)
 
     # Trimming and padding ####################################################
     # Only encoding the SMILES strings with length <= max_len
     # Also pad the list of lists with pad_char
-    smiles = [s for s, i in zip(smiles, indexed_smiles)
-              if len(i) <= max_seq_len]
-    indexed_smiles = [s + [token_dict[pad_char], ] * (max_seq_len - len(s))
-                      for s in indexed_smiles if len(s) <= max_seq_len]
+    sentences = [s for s, i in zip(sentences, indexed_sentences)
+                 if len(i) <= max_seq_len]
+    indexed_sentences = [s + [token_dict[pad_char], ] * (max_seq_len - len(s))
+                         for s in indexed_sentences if len(s) <= max_seq_len]
 
-    return smiles, token_dict, indexed_smiles
+    return sentences, token_dict, indexed_sentences
 
 
 if __name__ == '__main__':
@@ -179,7 +184,10 @@ if __name__ == '__main__':
 
     # Index SMILES strings
     list_smiles, token_dict, list_indexed_smiles = \
-        tokenize_smiles(df['smiles'].unique(), 128, 'atom')
+        tokenize(data_name='DTC_SMILES',
+                 sentences=df['smiles'].unique(),
+                 max_seq_len=128,
+                 tokenize_on='char')
 
     print(list_smiles[0])
     print(list_indexed_smiles[0])

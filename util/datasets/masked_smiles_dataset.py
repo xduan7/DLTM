@@ -1,5 +1,5 @@
 """ 
-    File Name:          DLTM/smiles_dataset.py
+    File Name:          DLTM/masked_smiles_dataset.py
     Author:             Xiaotian Duan (xduan7)
     Email:              xduan7@uchicago.edu
     Date:               11/5/18
@@ -15,33 +15,34 @@ import torch.utils.data as data
 from sklearn.model_selection import train_test_split
 
 from util.data_processing.sentence_masking import mask_sentences
-from util.data_processing.tokenization import tokenize_smiles
+from util.data_processing.tokenization import tokenize
 
 logger = logging.getLogger(__name__)
 
 
-class SMILESDataset(data.Dataset):
+class MaskedSMILESDataset(data.Dataset):
 
-    def __init__(
-            self,
+    def __init__(self,
+                 data_name: str,
+                 data_root: str,
+                 data_file_name: str,
+                 training: bool,
+                 rand_state: int = 0,
 
-            data_root: str,
-            training: bool,
-            rand_state: int = 0,
+                 max_seq_len: int = 150,
+                 tokenize_on: str = 'atom',
+                 sos_char: str = '<',
+                 eos_char: str = '>',
+                 pad_char: str = ' ',
+                 mask_char: str = '?',
 
-            max_seq_len: int = 150,
-            tokenize_on: str = 'atom',
-            sos_char: str = '<',
-            eos_char: str = '>',
-            pad_char: str = ' ',
-            mask_char: str = '?',
-
-            val_ratio: float = 0.1):
+                 val_ratio: float = 0.1):
         """
 
 
 
         Args:
+            data_name:
             data_root:
             training:
             rand_state:
@@ -57,19 +58,20 @@ class SMILESDataset(data.Dataset):
         self.__rand_state = rand_state
 
         # Get the SMILES strings from file
-        data_path = os.path.join(data_root, 'dtc.train.filtered.txt')
+        data_path = os.path.join(data_root, data_file_name)
         smiles = pd.read_csv(data_path, sep='\t')['smiles'].unique()
 
         # Index the SMILES strings (making it numeric with tokenization dict)
         smiles, token_dict, indexed = \
-            tokenize_smiles(smiles=smiles,
-                            max_seq_len=max_seq_len,
-                            tokenize_on=tokenize_on,
-                            sos_char=sos_char,
-                            eos_char=eos_char,
-                            pad_char=pad_char,
-                            mask_char=mask_char,
-                            data_root=data_root)
+            tokenize(data_name=data_name,
+                     sentences=smiles,
+                     max_seq_len=max_seq_len,
+                     tokenize_on=tokenize_on,
+                     sos_char=sos_char,
+                     eos_char=eos_char,
+                     pad_char=pad_char,
+                     mask_char=mask_char,
+                     data_root=data_root)
 
         # This might save some ram and processing time
         indexed = np.array(indexed).astype(np.uint8)
@@ -142,7 +144,10 @@ class SMILESDataset(data.Dataset):
 
 if __name__ == '__main__':
 
-    dataset = SMILESDataset('../../data/', True, rand_state=0)
+    dataset = MaskedSMILESDataset(data_name='DTC',
+                                  data_root='../../data/',
+                                  data_file_name='dtc.train.filtered.txt',
+                                  training=True)
     m, d, t = dataset[-1]
 
     print(np.multiply(m, d))

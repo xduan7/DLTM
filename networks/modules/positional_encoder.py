@@ -71,9 +71,9 @@ if __name__ == '__main__':
 
     plt.figure(figsize=(24, 8))
 
-    seq_len = 128
+    seq_len = 1024
     dim = 32
-    freq = 8.0
+    freq = 16.0
 
     batch_input = Variable(torch.zeros(1, seq_len, dim)).cuda()
     pe = PositionalEncoder(seq_len, dim, base_feq=freq).cuda()

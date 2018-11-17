@@ -19,64 +19,64 @@ if __name__ == '__main__':
 
     param_dict_list = [
 
-        # Baseline ############################################################
-        {'pos_freq': '4.0',
-         'embedding_scale': '16.0',
-         'embedding_dim': '128',
-         'num_layers': '6',
-         'num_heads': '8', },
-
-        # Test out freq vs performance ########################################
-        {'pos_freq': '2.0',
-         'embedding_scale': '16.0',
-         'embedding_dim': '128',
-         'num_layers': '6',
-         'num_heads': '8', },
-
-        {'pos_freq': '8.0',
-         'embedding_scale': '16.0',
-         'embedding_dim': '128',
-         'num_layers': '6',
-         'num_heads': '8', },
-
-        # Test out dimension vs performance ###################################
-        {'pos_freq': '4.0',
-         'embedding_scale': '16.0',
-         'embedding_dim': '64',
-         'num_layers': '6',
-         'num_heads': '8', },
-
-        {'pos_freq': '4.0',
-         'embedding_scale': '16.0',
-         'embedding_dim': '256',
-         'num_layers': '6',
-         'num_heads': '8', },
-
-        # # Number of layers vs performance #####################################
-        # {'pos_freq': '4.0',
-        #  'embedding_scale': '16.0',
-        #  'embedding_dim': '128',
-        #  'num_layers': '3',
-        #  'num_heads': '8', },
-        #
-        # {'pos_freq': '4.0',
-        #  'embedding_scale': '16.0',
-        #  'embedding_dim': '128',
-        #  'num_layers': '12',
-        #  'num_heads': '8', },
-        #
-        # # Number of heads vs performance ######################################
+        # # Baseline ############################################################
         # {'pos_freq': '4.0',
         #  'embedding_scale': '16.0',
         #  'embedding_dim': '128',
         #  'num_layers': '6',
-        #  'num_heads': '4', },
+        #  'num_heads': '8', },
         #
-        # {'pos_freq': '4.0',
+        # # Test out freq vs performance ########################################
+        # {'pos_freq': '2.0',
         #  'embedding_scale': '16.0',
         #  'embedding_dim': '128',
         #  'num_layers': '6',
-        #  'num_heads': '16', },
+        #  'num_heads': '8', },
+        #
+        # {'pos_freq': '8.0',
+        #  'embedding_scale': '16.0',
+        #  'embedding_dim': '128',
+        #  'num_layers': '6',
+        #  'num_heads': '8', },
+        #
+        # # Test out dimension vs performance ###################################
+        # {'pos_freq': '4.0',
+        #  'embedding_scale': '16.0',
+        #  'embedding_dim': '64',
+        #  'num_layers': '6',
+        #  'num_heads': '8', },
+        #
+        # {'pos_freq': '4.0',
+        #  'embedding_scale': '16.0',
+        #  'embedding_dim': '256',
+        #  'num_layers': '6',
+        #  'num_heads': '8', },
+
+        # Number of layers vs performance #####################################
+        {'pos_freq': '4.0',
+         'embedding_scale': '16.0',
+         'embedding_dim': '128',
+         'num_layers': '12',
+         'num_heads': '8', },
+
+        {'pos_freq': '4.0',
+         'embedding_scale': '16.0',
+         'embedding_dim': '128',
+         'num_layers': '3',
+         'num_heads': '8', },
+
+        # Number of heads vs performance ######################################
+        {'pos_freq': '4.0',
+         'embedding_scale': '16.0',
+         'embedding_dim': '128',
+         'num_layers': '6',
+         'num_heads': '4', },
+
+        {'pos_freq': '4.0',
+         'embedding_scale': '16.0',
+         'embedding_dim': '128',
+         'num_layers': '6',
+         'num_heads': '16', },
 
     ]
 
@@ -114,10 +114,10 @@ if __name__ == '__main__':
             '--max_num_epochs', '500',
 
             '--optimizer', 'Adam',
-            '--lr', '0.0002',
+            '--lr', '0.001',
             '--l2_regularization', '1e-5',
-            '--lr_decay_factor', '0.95',
-            '--num_logs_per_epoch', '5',
+            '--lr_decay_factor', '1.0',
+            '--num_logs_per_epoch', '6',
             '--early_stop_patience', '10',
 
             # Miscellaneous config ############################################

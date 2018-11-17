@@ -1,12 +1,13 @@
 """ 
-    File Name:          DLTM/masked_smiles_pred.py
+    File Name:          DLTM/protein_func_pred.py
     Author:             Xiaotian Duan (xduan7)
     Email:              xduan7@uchicago.edu
-    Date:               11/8/18
+    Date:               11/17/18
     Python Version:     3.6.6
     File Description:   
 
 """
+
 import json
 import argparse
 
@@ -19,7 +20,7 @@ from torch.optim.lr_scheduler import LambdaLR
 
 from networks.encoder_clf import EncoderClf
 from networks.modules.encoder import Encoder
-from util.datasets.masked_smiles_dataset import MaskedSMILESDataset
+from util.datasets.core_seed_dataset import CoreSEEDDataset
 from util.misc.optimizer import get_optimizer
 from util.misc.rand_state_seeding import seed_random_state
 
@@ -87,22 +88,22 @@ def validate(clf, device, val_loader):
 def main():
     # Training settings
     parser = argparse.ArgumentParser(
-        description='Masked SMILES string prediction with transformer encoder')
+        description='Protein function prediction with transformer encoder')
 
     # Encoder parameters ######################################################
-    parser.add_argument('--seq_length', type=int, default=128,
-                        help='max length for training/testing SMILES strings')
-    parser.add_argument('--pos_freq', type=float, default=4.0,
+    parser.add_argument('--seq_length', type=int, default=1024,
+                        help='max length for training/testing protein seq')
+    parser.add_argument('--pos_freq', type=float, default=32.0,
                         help='frequency for positional encoding')
-    parser.add_argument('--embedding_scale', type=float, default=24.0,
+    parser.add_argument('--embedding_scale', type=float, default=16.0,
                         help='scale of word embedding to positional encoding')
-    parser.add_argument('--embedding_dim', type=int, default=512,
+    parser.add_argument('--embedding_dim', type=int, default=8,
                         help='embedding and model dimension')
     parser.add_argument('--num_layers', type=int, default=6,
                         help='number of encoding layers in encoder')
-    parser.add_argument('--num_heads', type=int, default=8,
+    parser.add_argument('--num_heads', type=int, default=4,
                         help='number of heads in multi-head attention layer')
-    parser.add_argument('--ff_mid_dim', type=int, default=512,
+    parser.add_argument('--ff_mid_dim', type=int, default=8,
                         help='dimension of mid layer in feed forward module')
 
     parser.add_argument('--pe_dropout', type=float, default=0.1,
@@ -119,8 +120,6 @@ def main():
                         help='input batch size for training')
     parser.add_argument('--val_batch_size', type=int, default=256,
                         help='input batch size for validation')
-    parser.add_argument('--validation_ratio', type=float, default=0.1,
-                        help='ratio of validation dataset over all data')
     parser.add_argument('--max_num_epochs', type=int, default=100,
                         help='maximum number of epochs for training')
     parser.add_argument('--optimizer', type=str, default='SGD',
@@ -157,12 +156,9 @@ def main():
 
     # Data loaders for training/validation
     dataset_kwargs = {
-        'data_name': 'DTC_SMILES',
         'data_root': './data/',
-        'data_file_name': 'dtc.train.filtered.txt',
         'rand_state': args.rand_state,
-        'max_seq_len': args.seq_length,
-        'val_ratio': args.validation_ratio, }
+        'max_seq_len': args.seq_length, }
 
     dataloader_kwargs = {
         'timeout': 1,
@@ -171,18 +167,19 @@ def main():
         'pin_memory': True if use_cuda else False, }
 
     trn_loader = torch.utils.data.DataLoader(
-        MaskedSMILESDataset(training=True, **dataset_kwargs),
+        CoreSEEDDataset(training=True, **dataset_kwargs),
         batch_size=args.trn_batch_size, **dataloader_kwargs)
 
     val_loader = torch.utils.data.DataLoader(
-        MaskedSMILESDataset(training=False, **dataset_kwargs),
+        CoreSEEDDataset(training=False, **dataset_kwargs),
         batch_size=args.trn_batch_size, **dataloader_kwargs)
 
     # Model and optimizer
-    dict_size = len(trn_loader.dataset.token_dict)
+    prt_dict_size = len(trn_loader.dataset.prt_token_dict)
+    fcn_size = len(trn_loader.dataset.fcn_dict)
 
-    # Using
-    encoder = Encoder(dict_size=dict_size,
+    # Using encoder from transformer
+    encoder = Encoder(dict_size=prt_dict_size,
                       seq_length=args.seq_length,
 
                       base_feq=args.pos_freq,
@@ -198,9 +195,10 @@ def main():
                       ff_dropout=args.ff_dropout,
                       enc_dropout=args.enc_dropout).to(device)
     output_layer = nn.Sequential(
-        nn.Linear(args.embedding_dim * args.seq_length, dict_size)).to(device)
+        nn.Linear(args.embedding_dim * args.seq_length, fcn_size)).to(device)
 
     clf = EncoderClf(encoder=encoder, output_module=output_layer)
+    clf = nn.DataParallel(clf)
 
     optimizer = get_optimizer(opt_type=args.optimizer,
                               networks=clf,
@@ -237,3 +235,6 @@ def main():
 
 
 main()
+
+
+

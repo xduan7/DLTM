@@ -60,8 +60,8 @@ class DenseClf(nn.Module):
 
         batch_size = indexed_sentences.size(0)
 
+        # x is of size (batch_size, seq_length, emb_dim)
         x = self.__positional_encoder(self.__embedding(indexed_sentences))
-        print(x.size)
 
         # Apply mask if available
         if mask is not None:

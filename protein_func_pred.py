@@ -138,7 +138,9 @@ def main():
                              'improvement')
 
     # Miscellaneous config ####################################################
-    parser.add_argument('--no-cuda', action='store_true', default=False,
+    parser.add_argument('--multi_gpu', action='store_true', default=False,
+                        help='using multi-GPU for training and testing')
+    parser.add_argument('--no_cuda', action='store_true', default=False,
                         help='disables CUDA training')
     parser.add_argument('--rand_state', type=int, default=0,
                         help='random state of numpy/sklearn/pytorch')
@@ -198,7 +200,8 @@ def main():
         nn.Linear(args.embedding_dim * args.seq_length, fcn_size)).to(device)
 
     clf = EncoderClf(encoder=encoder, output_module=output_layer)
-    # clf = nn.DataParallel(clf)
+    if args.multi_gpu:
+        clf = nn.DataParallel(clf)
 
     optimizer = get_optimizer(opt_type=args.optimizer,
                               networks=clf,

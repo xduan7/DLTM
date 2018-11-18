@@ -20,14 +20,53 @@ if __name__ == '__main__':
     param_dict_list = [
 
         # Baseline ############################################################
+        # {
+        #     'seq_length': '512',
+        #     'embedding_dim': '8',
+        #     'num_layers': '6',
+        #     'num_heads': '4',
+        #     'dropout': '0.0',
+        # },
+
         {
-            'seq_length': '512',
+            'seq_length': '1024',
+            'embedding_dim': '8',
+            'num_layers': '4',
+            'num_heads': '4',
+            'dropout': '0.2',
+        },
+
+        {
+            'seq_length': '1024',
             'embedding_dim': '8',
             'num_layers': '6',
             'num_heads': '4',
-            'dropout': '0.0',
+            'dropout': '0.2',
          },
 
+        {
+            'seq_length': '1024',
+            'embedding_dim': '8',
+            'num_layers': '8',
+            'num_heads': '4',
+            'dropout': '0.2',
+        },
+
+        {
+            'seq_length': '1024',
+            'embedding_dim': '16',
+            'num_layers': '6',
+            'num_heads': '4',
+            'dropout': '0.2',
+        },
+
+        {
+            'seq_length': '1024',
+            'embedding_dim': '32',
+            'num_layers': '6',
+            'num_heads': '4',
+            'dropout': '0.2',
+        },
     ]
 
     for param_dict in param_dict_list:
@@ -63,13 +102,14 @@ if __name__ == '__main__':
             '--max_num_epochs', '500',
 
             '--optimizer', 'Adam',
-            '--lr', '0.0004',
+            '--lr', '0.0001',
             '--l2_regularization', '1e-5',
-            '--lr_decay_factor', '0.95',
+            '--lr_decay_factor', '0.9',
             '--num_logs_per_epoch', '6',
             '--early_stop_patience', '10',
 
             # Miscellaneous config ############################################
+            '--multi_gpu',
             '--rand_state', '0', ]
 
         runpy.run_module('protein_func_pred')

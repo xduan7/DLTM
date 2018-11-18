@@ -1,5 +1,5 @@
 """ 
-    File Name:          DLTM/launcher.py
+    File Name:          DLTM/masked_smiles_pred_launcher.py
     Author:             Xiaotian Duan (xduan7)
     Email:              xduan7@uchicago.edu
     Date:               11/12/18
@@ -85,7 +85,7 @@ if __name__ == '__main__':
         now = datetime.datetime.now()
 
         # Save log with timestamp name
-        tee = Tee('./results/logs/%02d%02d_%02d%02d.txt'
+        tee = Tee('./results/logs/masked_smiles_pred/%02d%02d_%02d%02d.txt'
                   % (now.month, now.day, now.hour, now.minute))
         sys.stdout = tee
 

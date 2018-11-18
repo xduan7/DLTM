@@ -198,7 +198,7 @@ def main():
         nn.Linear(args.embedding_dim * args.seq_length, fcn_size)).to(device)
 
     clf = EncoderClf(encoder=encoder, output_module=output_layer)
-    clf = nn.DataParallel(clf)
+    # clf = nn.DataParallel(clf)
 
     optimizer = get_optimizer(opt_type=args.optimizer,
                               networks=clf,

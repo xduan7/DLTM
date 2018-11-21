@@ -15,7 +15,8 @@ import torch.utils.data as data
 from sklearn.model_selection import train_test_split
 
 from util.data_processing.sentence_masking import mask_sentences
-from util.data_processing.tokenization import tokenize
+from util.data_processing.tokenization import \
+    get_smiles_token_dict, tokenize_smiles
 
 logger = logging.getLogger(__name__)
 
@@ -23,64 +24,34 @@ logger = logging.getLogger(__name__)
 class MaskedSMILESDataset(data.Dataset):
 
     def __init__(self,
-                 data_name: str,
-                 data_root: str,
-                 data_file_name: str,
+                 smiles: str,
+
+
                  training: bool,
                  rand_state: int = 0,
 
-                 max_seq_len: int = 150,
                  tokenize_on: str = 'atom',
-                 sos_char: str = '<',
-                 eos_char: str = '>',
-                 pad_char: str = ' ',
-                 mask_char: str = '?',
-
+                 max_seq_length: int = 128,
                  val_ratio: float = 0.1):
-        """
-
-
-
-        Args:
-            data_name:
-            data_root:
-            training:
-            rand_state:
-            max_seq_len:
-            tokenize_on:
-            sos_char:
-            eos_char:
-            pad_char:
-            mask_char:
-            val_ratio:
-        """
 
         self.__rand_state = rand_state
 
-        # Get the SMILES strings from file
-        data_path = os.path.join(data_root, data_file_name)
-        smiles = pd.read_csv(data_path, sep='\t')['smiles'].unique()
+        # Tokenize the SMILES strings (with tokenization dict)
+        token_dict = get_smiles_token_dict(dict_path=token_dict_path,
+                                           tokenize_on=tokenize_on,
+                                           smiles_strings=smiles)
 
-        # Index the SMILES strings (making it numeric with tokenization dict)
-        smiles, token_dict, indexed = \
-            tokenize(data_name=data_name,
-                     sentences=smiles,
-                     max_seq_len=max_seq_len,
-                     tokenize_on=tokenize_on,
-                     sos_char=sos_char,
-                     eos_char=eos_char,
-                     pad_char=pad_char,
-                     mask_char=mask_char,
-                     data_root=data_root)
-
-        # This might save some ram and processing time
-        indexed = np.array(indexed).astype(np.uint8)
+        smiles, tokenized_smiles = \
+            tokenize_smiles(data_path=tokenized_data_path,
+                            token_dict=token_dict,
+                            smiles_strings=smiles,
+                            max_seq_length=max_seq_length)
 
         # Mask encoded smile strings (1 mask per string)
         masked_values, masked = \
-            mask_sentences(mask=token_dict[mask_char],
+            mask_sentences(mask=token_dict['<UNK>'],
                            sentences=smiles,
-                           indexed_sentences=indexed,
+                           tokenized_sentences=tokenized_smiles,
                            rand_state=rand_state)
 
         # Train/test split the masked SMILES strings and targets
@@ -102,7 +73,7 @@ class MaskedSMILESDataset(data.Dataset):
 
         # Create a mask for padding characters in each SMILES string
         self.__padding_mask = np.array(
-            (self.__data != self.token_dict[pad_char])).astype(np.int64)
+            (self.__data != self.token_dict['<PAD>'])).astype(np.int64)
 
         # Convert the data and target type to int64 to work with PyTorch
         self.__data = np.array(self.__data).astype(np.int64)

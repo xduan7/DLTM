@@ -71,7 +71,7 @@ if __name__ == '__main__':
 
     plt.figure(figsize=(24, 8))
 
-    seq_len = 1024
+    seq_len = 256
     dim = 32
     freq = 16.0
 

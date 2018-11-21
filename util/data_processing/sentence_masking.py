@@ -11,12 +11,12 @@ import copy
 import random
 
 
-def mask_sentences(mask,
+def mask_sentences(mask: str,
                    sentences: iter,
-                   indexed_sentences: iter,
+                   tokenized_sentences: iter,
                    rand_state: int = 0):
-    """masked_indexed_sentences = mask_sentences(
-        0, sentences, indexed_sentences)
+    """masked_tokenized_sentences = mask_sentences(
+        0, sentences, tokenized_sentences)
 
     This function takes an iterable structure of strings and mask one part
     of the indexed and padded version of the string randomly.
@@ -33,7 +33,7 @@ def mask_sentences(mask,
     Args:
         mask: mask value with the same type as an element in indexed sentences
         sentences (iter): iterable of original sentences
-        indexed_sentences (iter): iterable of indexed (numeric) sentences
+        tokenized_sentences (iter): iterable of indexed (numeric) sentences
         rand_state (int): random seed
 
     Returns:
@@ -41,10 +41,10 @@ def mask_sentences(mask,
     """
 
     random.seed(rand_state)
-    masked_indexed_sentences = copy.deepcopy(indexed_sentences)
+    masked_tokenized_sentences = copy.deepcopy(tokenized_sentences)
     masked_values = []
 
-    for s, i in zip(sentences, masked_indexed_sentences):
+    for s, i in zip(sentences, masked_tokenized_sentences):
 
         # Note that the SOS, EOS and padding shall not be masked
         index = random.randint(1, len(s))
@@ -52,4 +52,4 @@ def mask_sentences(mask,
         masked_values.append(i[index])
         i[index] = type(i[0])(mask)
 
-    return masked_values, masked_indexed_sentences
+    return masked_values, masked_tokenized_sentences

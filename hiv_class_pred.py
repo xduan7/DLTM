@@ -1,12 +1,13 @@
 """ 
-    File Name:          DLTM/masked_smiles_pred.py
+    File Name:          DLTM/hiv_class_pred.py
     Author:             Xiaotian Duan (xduan7)
     Email:              xduan7@uchicago.edu
-    Date:               11/8/18
+    Date:               11/21/18
     Python Version:     3.6.6
     File Description:   
 
 """
+
 import json
 import argparse
 
@@ -15,12 +16,12 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 import numpy as np
-import pandas as pd
+from sklearn.metrics import roc_auc_score
 from torch.optim.lr_scheduler import LambdaLR
 
 from networks.encoder_clf import EncoderClf
 from networks.modules.encoder import Encoder
-from util.datasets.masked_smiles_dataset import MaskedSMILESDataset
+from util.datasets.hiv_dataset import HIVDataset
 from util.misc.optimizer import get_optimizer
 from util.misc.rand_state_seeding import seed_random_state
 
@@ -38,8 +39,8 @@ def train(clf, device, trn_loader, optimizer, num_logs_per_epoch):
             mask.to(device), data.to(device), target.to(device)
 
         optimizer.zero_grad()
-        output = clf(data, mask)
-        loss = F.cross_entropy(output, target)
+        output = torch.sigmoid(clf(data, mask))
+        loss = F.binary_cross_entropy(output, target)
         loss.backward()
         optimizer.step()
 
@@ -52,12 +53,15 @@ def train(clf, device, trn_loader, optimizer, num_logs_per_epoch):
             recorded_loss = 0.
 
 
-def validate(clf, device, val_loader):
+def validate(clf, device, val_loader, printing=True):
 
     clf.eval()
 
     val_loss = 0.
     val_correct = 0
+
+    y_true = np.array([])
+    y_score = np.array([])
 
     with torch.no_grad():
 
@@ -66,44 +70,55 @@ def validate(clf, device, val_loader):
             mask, data, target = \
                 mask.to(device), data.to(device), target.to(device)
 
-            output = clf(data, mask)
-            loss = F.cross_entropy(output, target, reduction='sum').item()
+            output = torch.sigmoid(clf(data, mask))
+            loss = F.binary_cross_entropy(
+                output, target, reduction='sum').item()
 
             val_loss += loss
             prediction = output.max(1, keepdim=True)[1]
-            val_correct += \
-                prediction.eq(target.view_as(prediction)).sum().item()
+
+            target = target.type(torch.LongTensor).view_as(prediction)
+            val_correct += prediction.eq(target.to(device)).sum().item()
+
+            y_true = np.concatenate(
+                (y_true, target.cpu().numpy().reshape(-1)), axis=0)
+            y_score = np.concatenate(
+                (y_score, output.cpu().numpy().reshape(-1)), axis=0)
 
     val_loss /= len(val_loader.dataset)
     val_acc = val_correct / len(val_loader.dataset)
+    roc_score = roc_auc_score(y_true=y_true, y_score=y_score)
 
-    print('\nValidation Results: \n'
-          '\t Average loss: %.4f, '
-          '\t Accuracy: %6i/%6i (%.1f%%)\n'
-          % (val_loss, val_correct, len(val_loader.dataset), 100. * val_acc))
+    if printing:
+        print('\nValidation Results: \n'
+              '\t Average Loss: %.4f, '
+              '\t Accuracy: %6i/%6i (%.1f%%), '
+              '\t ROC-AUC Score: %.4f\n'
+              % (val_loss, val_correct, len(val_loader.dataset),
+                 100. * val_acc, roc_score))
 
-    return val_acc
+    return val_acc, roc_score
 
 
 def main():
     # Training settings
     parser = argparse.ArgumentParser(
-        description='Masked SMILES string prediction with transformer encoder')
+        description='HIV drug class prediction with transformer encoder')
 
     # Encoder parameters ######################################################
-    parser.add_argument('--seq_length', type=int, default=128,
+    parser.add_argument('--seq_length', type=int, default=256,
                         help='max length for training/testing SMILES strings')
     parser.add_argument('--pos_freq', type=float, default=4.0,
                         help='frequency for positional encoding')
-    parser.add_argument('--embedding_scale', type=float, default=24.0,
+    parser.add_argument('--embedding_scale', type=float, default=16.0,
                         help='scale of word embedding to positional encoding')
-    parser.add_argument('--embedding_dim', type=int, default=512,
+    parser.add_argument('--embedding_dim', type=int, default=32,
                         help='embedding and model dimension')
-    parser.add_argument('--num_layers', type=int, default=6,
+    parser.add_argument('--num_layers', type=int, default=4,
                         help='number of encoding layers in encoder')
-    parser.add_argument('--num_heads', type=int, default=8,
+    parser.add_argument('--num_heads', type=int, default=4,
                         help='number of heads in multi-head attention layer')
-    parser.add_argument('--ff_mid_dim', type=int, default=512,
+    parser.add_argument('--ff_mid_dim', type=int, default=32,
                         help='dimension of mid layer in feed forward module')
 
     parser.add_argument('--pe_dropout', type=float, default=0.1,
@@ -120,18 +135,19 @@ def main():
                         help='input batch size for training')
     parser.add_argument('--val_batch_size', type=int, default=256,
                         help='input batch size for validation')
-    parser.add_argument('--validation_ratio', type=float, default=0.1,
-                        help='ratio of validation dataset over all data')
+    parser.add_argument('--tst_batch_size', type=int, default=256,
+                        help='input batch size for testing')
+
     parser.add_argument('--max_num_epochs', type=int, default=100,
                         help='maximum number of epochs for training')
     parser.add_argument('--optimizer', type=str, default='SGD',
                         help='optimizer for transformer encoder training',
                         choices=['SGD', 'RMSprop', 'Adam'])
-    parser.add_argument('--lr', type=float, default=0.001,
+    parser.add_argument('--lr', type=float, default=0.0001,
                         help='learning rate of the optimizer')
-    parser.add_argument('--l2_regularization', type=float, default=1e-5,
+    parser.add_argument('--l2_regularization', type=float, default=1e-4,
                         help='L2 regularization for nn weights')
-    parser.add_argument('--lr_decay_factor', type=float, default=0.95,
+    parser.add_argument('--lr_decay_factor', type=float, default=1.0,
                         help='decay factor for learning rate')
     parser.add_argument('--num_logs_per_epoch', type=int, default=5,
                         help='number of logs per epoch during training')
@@ -157,15 +173,6 @@ def main():
     device = torch.device('cuda' if use_cuda else 'cpu')
 
     # Data loaders for training/validation
-    dataset_kwargs = {
-        'smiles': pd.read_csv('./data/dtc.train.filtered.txt',
-                              sep='\t')['smiles'].unique(),
-        'token_dict_path': './data/DTC_atom_token_dict.json',
-        'tokenized_data_path': './data/DTC_tokenized_on_atom.json',
-        'rand_state': args.rand_state,
-        'max_seq_length': args.seq_length,
-        'val_ratio': args.validation_ratio, }
-
     dataloader_kwargs = {
         'timeout': 1,
         'shuffle': 'True',
@@ -173,11 +180,27 @@ def main():
         'pin_memory': True if use_cuda else False, }
 
     trn_loader = torch.utils.data.DataLoader(
-        MaskedSMILESDataset(training=True, **dataset_kwargs),
+        HIVDataset(
+            token_dict_path='./data/HIV_atom_token_dict.json',
+            tokenized_data_path='./data/HIV_trn_tokenized_on_atom.pkl',
+            dataset_usage='training',
+            max_seq_length=args.seq_length),
         batch_size=args.trn_batch_size, **dataloader_kwargs)
 
     val_loader = torch.utils.data.DataLoader(
-        MaskedSMILESDataset(training=False, **dataset_kwargs),
+        HIVDataset(
+            token_dict_path='./data/HIV_atom_token_dict.json',
+            tokenized_data_path='./data/HIV_val_tokenized_on_atom.pkl',
+            dataset_usage='validation',
+            max_seq_length=args.seq_length),
+        batch_size=args.trn_batch_size, **dataloader_kwargs)
+
+    tst_loader = torch.utils.data.DataLoader(
+        HIVDataset(
+            token_dict_path='./data/HIV_atom_token_dict.json',
+            tokenized_data_path='./data/HIV_tst_tokenized_on_atom.pkl',
+            dataset_usage='test',
+            max_seq_length=args.seq_length),
         batch_size=args.trn_batch_size, **dataloader_kwargs)
 
     # Model and optimizer
@@ -200,7 +223,7 @@ def main():
                       ff_dropout=args.ff_dropout,
                       enc_dropout=args.enc_dropout).to(device)
     output_layer = nn.Sequential(
-        nn.Linear(args.embedding_dim * args.seq_length, dict_size)).to(device)
+        nn.Linear(args.embedding_dim * args.seq_length, 1)).to(device)
 
     clf = EncoderClf(encoder=encoder, output_module=output_layer)
 
@@ -213,7 +236,8 @@ def main():
                         lr_lambda=lambda e:
                         args.lr_decay_factor ** e)
 
-    best_acc = 0.0
+    best_roc_score = 0.0
+    test_roc_score = 0.0
     patience = 0
 
     for epoch in range(1, args.max_num_epochs + 1):
@@ -221,11 +245,15 @@ def main():
         print('Epoch %3i: ' % epoch)
 
         train(clf, device, trn_loader, optimizer, args.num_logs_per_epoch)
-        val_acc = validate(clf, device, val_loader)
+        val_acc, roc_score = validate(clf, device, val_loader)
 
-        if val_acc > best_acc:
-            best_acc = val_acc
+        if roc_score > best_roc_score:
+
+            best_roc_score = roc_score
             patience = 0
+
+            test_acc, test_roc_score = \
+                validate(clf, device, tst_loader, printing=False)
         else:
             patience += 1
 
@@ -235,7 +263,8 @@ def main():
         lr_decay.step(epoch)
         print('=' * 80 + '\n')
 
-    print('Best Accuracy: %.2f%%' % (100. * best_acc))
+    print('Best ROC-AUC: %.4f for validation and %.4f for test'
+          % (best_roc_score, test_roc_score))
 
 
 main()

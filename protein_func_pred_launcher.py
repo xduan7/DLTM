@@ -29,44 +29,60 @@ if __name__ == '__main__':
         # },
 
         {
-            'seq_length': '1024',
-            'embedding_dim': '8',
-            'num_layers': '4',
-            'num_heads': '4',
-            'dropout': '0.2',
-        },
-
-        {
-            'seq_length': '1024',
+            'seq_length': '512',
             'embedding_dim': '8',
             'num_layers': '6',
             'num_heads': '4',
-            'dropout': '0.2',
-         },
-
-        {
-            'seq_length': '1024',
-            'embedding_dim': '8',
-            'num_layers': '8',
-            'num_heads': '4',
-            'dropout': '0.2',
+            'dropout': '0.1',
         },
 
         {
-            'seq_length': '1024',
+            'seq_length': '512',
+            'embedding_dim': '12',
+            'num_layers': '6',
+            'num_heads': '4',
+            'dropout': '0.1',
+        },
+
+        {
+            'seq_length': '512',
             'embedding_dim': '16',
             'num_layers': '6',
             'num_heads': '4',
-            'dropout': '0.2',
+            'dropout': '0.1',
         },
 
-        {
-            'seq_length': '1024',
-            'embedding_dim': '32',
-            'num_layers': '6',
-            'num_heads': '4',
-            'dropout': '0.2',
-        },
+        # {
+        #     'seq_length': '1024',
+        #     'embedding_dim': '8',
+        #     'num_layers': '6',
+        #     'num_heads': '4',
+        #     'dropout': '0.2',
+        #  },
+        #
+        # {
+        #     'seq_length': '1024',
+        #     'embedding_dim': '8',
+        #     'num_layers': '8',
+        #     'num_heads': '4',
+        #     'dropout': '0.2',
+        # },
+        #
+        # {
+        #     'seq_length': '1024',
+        #     'embedding_dim': '16',
+        #     'num_layers': '6',
+        #     'num_heads': '4',
+        #     'dropout': '0.2',
+        # },
+        #
+        # {
+        #     'seq_length': '1024',
+        #     'embedding_dim': '32',
+        #     'num_layers': '6',
+        #     'num_heads': '4',
+        #     'dropout': '0.2',
+        # },
     ]
 
     for param_dict in param_dict_list:

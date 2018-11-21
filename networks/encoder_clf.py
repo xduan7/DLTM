@@ -36,5 +36,4 @@ class EncoderClf(nn.Module):
         encoder_output = self.__encoder(indexed_sentences, mask.unsqueeze(-2))
 
         # Log softmax output
-        return F.log_softmax(
-            self.__output_module(encoder_output.view(batch_size, -1)), dim=-1)
+        return self.__output_module(encoder_output.view(batch_size, -1))

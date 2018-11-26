@@ -15,6 +15,7 @@ import logging
 import time
 
 import numpy as np
+import pandas as pd
 import multiprocessing
 from rdkit import Chem
 from joblib import Parallel, delayed, parallel_backend
@@ -242,6 +243,12 @@ def tokenize_smiles(
                 pickle.dump(tokenized_smiles_strings, f)
 
     # Take care of padding and only return the strings within given length
+    if max_seq_length is None:
+        max_seq_length = 0
+        for t in tokenized_smiles_strings:
+            if len(t) > max_seq_length:
+                max_seq_length = len(t)
+
     ret_smiles_strings = \
         [s for s, t in zip(smiles_strings, tokenized_smiles_strings)
          if len(t) <= max_seq_length]
@@ -257,44 +264,217 @@ def tokenize_smiles(
     return ret_smiles_strings, ret_tokenized_smiles_strings
 
 
+def get_protein_token_dict(
+        dict_path: str,
+        token_length: int,
+        protein_seqs: iter,
+        reload_from_disk: bool = True):
+    """token_dict = get_protein_token_dict( './dict_path', protein_seqs)
+
+    :param dict_path:
+    :param token_length:
+    :param protein_seqs:
+    :param reload_from_disk:
+    :return:
+    """
+
+    # Load the tokenization dictionary if it exists already
+    if os.path.exists(dict_path) and reload_from_disk:
+        with open(dict_path, 'r') as f:
+            return json.load(f)
+
+    # Make sure of the tokenization length, data path, and special tokens
+    assert token_length > 0
+    create_path(os.path.dirname(dict_path))
+    special_tokens = SP_TOKENS
+
+    total_seq_length = 0
+    occurr_dict = {}
+    for ps in protein_seqs:
+
+        total_seq_length += len(ps)
+        for i in range(len(ps)):
+            for j in range(1, token_length + 1):
+
+                if i + j + 1 <= len(ps):
+
+                    sub_seq = ps[i: i + j]
+
+                    if sub_seq in occurr_dict:
+                        occurr_dict[sub_seq] = occurr_dict[sub_seq] + 1
+                    else:
+                        occurr_dict[sub_seq] = 1
+
+    # Add special tokens into the token list
+    # After making sure that they are have completely exclusive elements
+    tokens = set(occurr_dict.keys())
+    assert set(special_tokens.values()).isdisjoint(tokens)
+    tokens = tokens.union(set(special_tokens.values()))
+
+    token_dict = {}
+    for i, c in enumerate(sorted(tokens)):
+        if c in occurr_dict:
+
+            prob = occurr_dict[c] / \
+                   (total_seq_length - len(protein_seqs) * (len(c) - 1))
+            token_dict[c] = (i, prob)
+        else:
+            token_dict[c] = (i, 1.0)
+
+    if reload_from_disk:
+        with open(dict_path, 'w') as f:
+            json.dump(token_dict, f, indent=4, separators=(',', ': '))
+
+    return token_dict
+
+
+def tokenize_protein(
+        data_path: str,
+        token_dict: dict,
+        protein_seqs: iter,
+        tokenize_strat: str,
+        max_seq_length: int = 128,
+        reload_from_disk: bool = True):
+
+    special_tokens = SP_TOKENS
+    assert tokenize_strat in ['overlapping', 'greedy', 'optimal']
+
+    # Load the tokenized protein sequences if the data file exists
+    if os.path.exists(data_path) and reload_from_disk:
+        with open(data_path, 'rb') as f:
+            tokenized_protein_seqs = pickle.load(f)
+
+    else:
+        # Make sure of the data directory
+        create_path(os.path.dirname(data_path))
+
+        # Get token length
+        token_length = 0
+        for k in token_dict.keys():
+            if k not in special_tokens.values() and len(k) > token_length:
+                token_length = len(k)
+
+        if tokenize_strat == 'overlapping':
+
+            # TODO: overlapping tokenization
+            tokenized_protein_seqs = []
+
+        elif tokenize_strat == 'greedy':
+
+            # Parallelized tokenization
+            def greedy_tokenize_one_protein_seq(ps):
+
+                t = []
+                curr_index = 0
+
+                while curr_index < len(ps):
+
+                    best_sub_seq = ''
+                    best_prob = 0.
+
+                    for j in range(1, token_length + 1):
+
+                        if curr_index + j > len(ps):
+                            break
+
+                        sub_seq = ps[curr_index: curr_index + j]
+
+                        if sub_seq in token_dict:
+
+                            prob = token_dict[sub_seq][1] ** (1. / j)
+
+                            if prob > best_prob:
+                                best_sub_seq = sub_seq
+                                best_prob = prob
+
+                    curr_index += len(best_sub_seq)
+                    t.append(token_dict[best_sub_seq][0])
+
+                return t
+
+            num_cores = multiprocessing.cpu_count()
+            tokenized_protein_seqs = Parallel(n_jobs=num_cores)(
+                delayed(greedy_tokenize_one_protein_seq)(ps)
+                for ps in protein_seqs)
+
+        elif tokenize_strat == 'optimal':
+
+            # TODO: optimal tokenization
+            tokenized_protein_seqs = []
+
+        # Add SOS and EOS to the tokenized sequences
+        sos_token = token_dict[special_tokens['SOS']][0]
+        eos_token = token_dict[special_tokens['EOS']][0]
+        pad_token = token_dict[special_tokens['PAD']][0]
+
+        tokenized_protein_seqs = [[sos_token, ] + t + [eos_token, ]
+                                  for t in tokenized_protein_seqs]
+
+        # Write the tokenized protein sequences into file (without padding)
+        if reload_from_disk:
+            with open(data_path, 'wb') as f:
+                pickle.dump(tokenized_protein_seqs, f)
+
+    # Take care of padding and only return the strings within given length
+    if max_seq_length is None:
+        max_seq_length = 0
+        for t in tokenized_protein_seqs:
+            if len(t) > max_seq_length:
+                max_seq_length = len(t)
+
+    ret_protein_seqs = \
+        [p for p, t in zip(protein_seqs, tokenized_protein_seqs)
+         if len(t) <= max_seq_length]
+    ret_tokenized_protein_seqs = \
+        [t + [pad_token, ] * (max_seq_length - len(t))
+         for t in tokenized_protein_seqs if len(t) <= max_seq_length]
+
+    logger.warning('Keeping %i out of %i (%.2f%%) SMILES strings due to '
+                   'maximum length limitation.'
+                   % (len(ret_protein_seqs), len(protein_seqs),
+                      100. * len(ret_protein_seqs)/len(protein_seqs)))
+
+    return ret_protein_seqs, ret_tokenized_protein_seqs
+
+
 if __name__ == '__main__':
 
     # Get all the SMILES strings from HIV dataset
-    tasks, (train, valid, test), transformers = \
-        load_hiv(featurizer='Raw', split='scaffold', reload=True)
-
-    tokenization_method = 'atom'
-
-    hiv_token_dict = get_smiles_token_dict(
-        dict_path='../../data/HIV_%s_token_dict.json' % tokenization_method,
-        smiles_strings=(list(train.ids) + list(valid.ids) + list(test.ids)),
-        tokenize_on=tokenization_method)
-
-    trn_smiles, trn_tokenized_smiles = tokenize_smiles(
-        data_path='../../data/HIV_trn_tokenized_on_%s.pkl'
-                  % tokenization_method,
-        token_dict=hiv_token_dict,
-        smiles_strings=train.ids)
-
-    val_smiles, val_tokenized_smiles = tokenize_smiles(
-        data_path='../../data/HIV_val_tokenized_on_%s.pkl'
-                  % tokenization_method,
-        token_dict=hiv_token_dict,
-        smiles_strings=valid.ids)
-
-    tst_smiles, tst_tokenized_smiles = tokenize_smiles(
-        data_path='../../data/HIV_tst_tokenized_on_%s.pkl'
-                  % tokenization_method,
-        token_dict=hiv_token_dict,
-        smiles_strings=test.ids)
-
-    print(valid.y)
-    print(len(valid.y))
-    print(np.sum(valid.y))
-
-    print(tst_smiles[0])
-    print(Chem.MolToSmarts(Chem.MolFromSmiles(tst_smiles[0])))
-    print(tst_tokenized_smiles[0])
+    # tasks, (train, valid, test), transformers = \
+    #     load_hiv(featurizer='Raw', split='scaffold', reload=True)
+    #
+    # tokenization_method = 'atom'
+    #
+    # hiv_token_dict = get_smiles_token_dict(
+    #     dict_path='../../data/HIV_%s_token_dict.json' % tokenization_method,
+    #     smiles_strings=(list(train.ids) + list(valid.ids) + list(test.ids)),
+    #     tokenize_on=tokenization_method)
+    #
+    # trn_smiles, trn_tokenized_smiles = tokenize_smiles(
+    #     data_path='../../data/HIV_trn_tokenized_on_%s.pkl'
+    #               % tokenization_method,
+    #     token_dict=hiv_token_dict,
+    #     smiles_strings=train.ids)
+    #
+    # val_smiles, val_tokenized_smiles = tokenize_smiles(
+    #     data_path='../../data/HIV_val_tokenized_on_%s.pkl'
+    #               % tokenization_method,
+    #     token_dict=hiv_token_dict,
+    #     smiles_strings=valid.ids)
+    #
+    # tst_smiles, tst_tokenized_smiles = tokenize_smiles(
+    #     data_path='../../data/HIV_tst_tokenized_on_%s.pkl'
+    #               % tokenization_method,
+    #     token_dict=hiv_token_dict,
+    #     smiles_strings=test.ids)
+    #
+    # print(valid.y)
+    # print(len(valid.y))
+    # print(np.sum(valid.y))
+    #
+    # print(tst_smiles[0])
+    # print(Chem.MolToSmarts(Chem.MolFromSmiles(tst_smiles[0])))
+    # print(tst_tokenized_smiles[0])
 
 
     # # Get all the SMILES strings from PCBA dataset
@@ -336,4 +516,25 @@ if __name__ == '__main__':
     #
     # print(len(test.ids))
     # print(len(tst_smiles))
+
+    # Protein sequence tokenization
+    trn_dataframe = pd.read_csv('../../data/coreseed.train.tsv',
+                                sep='\t', usecols=['protein'])
+
+    protein_sequences = trn_dataframe['protein'].unique()
+
+    protein_token_length = 3
+    protein_token_dict = get_protein_token_dict(
+        '../../data/CoreSEED_%i_token_dict.json' % protein_token_length,
+        token_length=protein_token_length, protein_seqs=protein_sequences)
+
+    protein_sequences, tokenized_protein_sequences = tokenize_protein(
+        '../../data/CoreSEED_trn_tokenized_on_%i.pkl' % protein_token_length,
+        token_dict=protein_token_dict,
+        protein_seqs=protein_sequences,
+        tokenize_strat='greedy',
+        max_seq_length=512)
+
+    print(protein_sequences[0])
+    print(tokenized_protein_sequences[0])
 

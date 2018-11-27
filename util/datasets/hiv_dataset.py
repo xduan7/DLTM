@@ -38,7 +38,6 @@ class HIVDataset(data.Dataset):
         tasks, (trn, val, tst), transformers = \
             load_hiv(featurizer='Raw', split='scaffold', reload=True)
 
-
         # seq_length = 0
         # for i in (list(trn.ids) + list(val.ids) + list(tst.ids)):
         #     if len(i) > seq_length:

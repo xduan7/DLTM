@@ -263,7 +263,7 @@ if __name__ == '__main__':
             '--max_num_epochs', '500',
 
             '--optimizer', 'SGD',
-            '--lr', '0.00005',
+            '--lr', '0.0001',
             '--l2_regularization', param_dict['l2_regularization'],
             '--lr_decay_factor', '0.95',
             '--num_logs_per_epoch', '5',

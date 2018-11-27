@@ -38,7 +38,8 @@ def train(clf, device, trn_loader, optimizer, num_logs_per_epoch):
             mask.to(device), data.to(device), target.to(device)
 
         optimizer.zero_grad()
-        output = clf(data, mask)
+        output = F.log_softmax(clf(data, mask), dim=-1)
+
         loss = F.nll_loss(output, target)
         loss.backward()
         optimizer.step()
@@ -66,7 +67,7 @@ def validate(clf, device, val_loader):
             mask, data, target = \
                 mask.to(device), data.to(device), target.to(device)
 
-            output = clf(data, mask)
+            output = F.log_softmax(clf(data, mask), dim=-1)
             loss = F.nll_loss(output, target, reduction='sum').item()
 
             val_loss += loss
@@ -89,6 +90,11 @@ def main():
     # Training settings
     parser = argparse.ArgumentParser(
         description='Protein function prediction with transformer encoder')
+
+    # Dataset parameters ######################################################
+    parser.add_argument('--token_length', type=int, default=1,
+                        help='max length of tokens for protein seq '
+                             'tokenization.')
 
     # Encoder parameters ######################################################
     parser.add_argument('--seq_length', type=int, default=1024,
@@ -159,8 +165,9 @@ def main():
     # Data loaders for training/validation
     dataset_kwargs = {
         'data_root': './data/',
+        'token_length': args.token_length,
         'rand_state': args.rand_state,
-        'max_seq_len': args.seq_length, }
+        'max_seq_length': args.seq_length, }
 
     dataloader_kwargs = {
         'timeout': 1,
@@ -177,8 +184,8 @@ def main():
         batch_size=args.trn_batch_size, **dataloader_kwargs)
 
     # Model and optimizer
-    prt_dict_size = len(trn_loader.dataset.prt_token_dict)
-    fcn_size = len(trn_loader.dataset.fcn_dict)
+    prt_dict_size = len(trn_loader.dataset.protein_token_dict)
+    fcn_size = len(trn_loader.dataset.function_token_dict)
 
     # Using encoder from transformer
     encoder = Encoder(dict_size=prt_dict_size,

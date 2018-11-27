@@ -25,8 +25,6 @@ class MaskedSMILESDataset(data.Dataset):
 
     def __init__(self,
                  smiles: str,
-
-
                  training: bool,
                  rand_state: int = 0,
 

@@ -14,43 +14,33 @@ import numpy as np
 import pandas as pd
 import torch.utils.data as data
 
+from util.data_processing.tokenization import get_protein_token_dict, \
+    tokenize_protein, SP_TOKENS
+
 logger = logging.getLogger(__name__)
 
 
 class CoreSEEDDataset(data.Dataset):
 
     def __init__(self,
-                 data_root: str,
                  training: bool,
+                 data_root: str,
+                 token_length: int,
                  rand_state: int = 0,
-
-                 max_seq_len: int = 1024,
-                 sos_char: str = '<',
-                 eos_char: str = '>',
-                 pad_char: str = ' '):
+                 max_seq_length: int = 1024):
 
         self.__rand_state = rand_state
 
-        # Should probably merge training and testing set anyway
-        # And get all the amino acids token dict as well as all the protein
-        # functions
-
         # Check if the token dict and class encoding exists
-        prt_token_dict_name = 'CoreSEED_protein_token_dict.json'
-        prt_token_dict_path = os.path.join(data_root,
-                                           prt_token_dict_name)
 
-        fcn_dict_name = 'CoreSEED_function_dict.json'
-        fcn_dict_path = os.path.join(data_root, fcn_dict_name)
+        function_token_dict_name = 'CoreSEED_function_token_dict.json'
+        function_token_dict_path = \
+            os.path.join(data_root, function_token_dict_name)
 
-        if os.path.exists(prt_token_dict_path) and \
-                os.path.exists(fcn_dict_path):
+        if os.path.exists(function_token_dict_path):
 
-            with open(prt_token_dict_path, 'r') as f:
-                prt_token_dict = json.load(f)
-
-            with open(fcn_dict_path, 'r') as f:
-                fcn_dict = json.load(f)
+            with open(function_token_dict_path, 'r') as f:
+                function_token_dict = json.load(f)
 
             file_name = 'coreseed.train.tsv' if training \
                 else 'coreseed.test.tsv'
@@ -69,63 +59,57 @@ class CoreSEEDDataset(data.Dataset):
             merged_dataframe = pd.concat([trn_dataframe, val_dataframe],
                                          ignore_index=True)
 
-            # Get all the protein sequences and tokenize
-            prt_array = merged_dataframe['protein'].unique()
-
-            sp_chars = {sos_char, eos_char, pad_char}
-            prt_token_list = list(
-                set.union(*[set(p) for p in prt_array]).union(sp_chars))
-
-            print(prt_token_list)
-            print(len(prt_token_list))
-
-            prt_token_dict = dict((t, i) for i, t in enumerate(
-                sorted(prt_token_list)))
-
-            # Save the protein token dict
-            with open(prt_token_dict_path, 'w') as f:
-                json.dump(prt_token_dict, f, indent=4, separators=(',', ': '))
-
             # Get all the functions and tokenize
-            fcn_array = merged_dataframe['function'].unique()
-            fcn_dict = dict((f, i) for i, f in enumerate(sorted(fcn_array)))
+            functions = merged_dataframe['function'].unique()
+            function_token_dict = dict((f, i) for i, f in
+                                       enumerate(sorted(functions)))
 
-            with open(fcn_dict_path, 'w') as f:
-                json.dump(fcn_dict, f, indent=4, separators=(',', ': '))
+            with open(function_token_dict_path, 'w') as f:
+                json.dump(function_token_dict, f,
+                          indent=4, separators=(',', ': '))
 
             dataframe = trn_dataframe if training else val_dataframe
 
-        # Tokenize all the proteins in dataframe
-        # Tokenize all the corresponding protein functions
-        self.__protein = dataframe['protein'].tolist()
-        self.__indexed_protein = \
-            [[prt_token_dict[c] for c in (sos_char + p + eos_char)]
-             for p in self.__protein]
+        protein_token_dict_path = \
+            os.path.join(data_root,
+                         'CoreSEED_%i_token_dict.json' % token_length)
 
-        self.__function = dataframe['function'].tolist()
-        self.__indexed_function = [fcn_dict[f] for f in self.__function]
+        protein_token_dict = get_protein_token_dict(
+            dict_path=protein_token_dict_path,
+            token_length=token_length,
+            protein_seqs=dataframe['protein'])
 
-        self.__indexed_function = \
-            [f for f, p in zip(self.__indexed_function, self.__indexed_protein)
-             if len(p) <= max_seq_len]
-        self.__indexed_protein = \
-            [p + [prt_token_dict[pad_char], ] * (max_seq_len - len(p))
-             for p in self.__indexed_protein if len(p) <= max_seq_len]
+        tokenized_protein_file_name = \
+            'CoreSEED_trn_tokenized_on_%i.pkl' % token_length if training \
+            else 'CoreSEED_val_tokenized_on_%i.pkl' % token_length
 
-        assert len(self.__indexed_protein) == len(self.__indexed_function)
+        tokenized_protein_path = \
+            os.path.join(data_root, tokenized_protein_file_name)
 
-        self.__len = len(self.__indexed_protein)
-        self.fcn_dict = fcn_dict
-        self.prt_token_dict = prt_token_dict
+        protein_sequences, tokenized_protein_sequences, tokenized_targets = \
+            tokenize_protein(data_path=tokenized_protein_path,
+                             token_dict=protein_token_dict,
+                             protein_seqs=dataframe['protein'],
+                             tokenize_strat='greedy',
+                             targets=dataframe['function'],
+                             target_token_dict=function_token_dict,
+                             max_seq_length=max_seq_length)
 
-        self.__indexed_protein = \
-            np.array(self.__indexed_protein).astype(np.int64)
-        self.__indexed_function = \
-            np.array(self.__indexed_function).astype(np.int64)
+        assert len(protein_sequences) == len(tokenized_protein_sequences)
+        assert len(protein_sequences) == len(tokenized_targets)
 
-        self.__padding_mask = \
-            np.array((self.__indexed_protein
-                      != self.prt_token_dict[pad_char])).astype(np.int64)
+        self.__len = len(protein_sequences)
+        self.protein_token_dict = protein_token_dict
+        self.function_token_dict = function_token_dict
+
+        self.__tokenized_protein_sequences = \
+            np.array(tokenized_protein_sequences).astype(np.int64)
+        self.__tokenized_targets = \
+            np.array(tokenized_targets).astype(np.int64)
+
+        pad_token = protein_token_dict[SP_TOKENS['PAD']][0]
+        self.__padding_mask = np.array(
+            (self.__tokenized_protein_sequences != pad_token)).astype(np.int64)
 
     def __len__(self):
         """len(dataset)
@@ -155,17 +139,18 @@ class CoreSEEDDataset(data.Dataset):
             )
         """
         return self.__padding_mask[index], \
-               self.__indexed_protein[index], \
-               self.__indexed_function[index]
+               self.__tokenized_protein_sequences[index], \
+               self.__tokenized_targets[index]
 
 
 if __name__ == '__main__':
 
-    dataset = CoreSEEDDataset(data_root='../../data/',
-                              max_seq_len=1024,
-                              training=False)
+    dataset = CoreSEEDDataset(training=True,
+                              data_root='../../data/',
+                              token_length=1,
+                              max_seq_length=512)
 
     print(dataset[0])
     print(dataset[1])
 
-    print(len(dataset.fcn_dict))
+    print(len(dataset.function_token_dict))

@@ -20,15 +20,8 @@ if __name__ == '__main__':
     param_dict_list = [
 
         # Baseline ############################################################
-        # {
-        #     'seq_length': '512',
-        #     'embedding_dim': '8',
-        #     'num_layers': '6',
-        #     'num_heads': '4',
-        #     'dropout': '0.0',
-        # },
-
         {
+            'token_length': '1',
             'seq_length': '512',
             'embedding_dim': '8',
             'num_layers': '6',
@@ -37,14 +30,7 @@ if __name__ == '__main__':
         },
 
         {
-            'seq_length': '512',
-            'embedding_dim': '12',
-            'num_layers': '6',
-            'num_heads': '4',
-            'dropout': '0.1',
-        },
-
-        {
+            'token_length': '2',
             'seq_length': '512',
             'embedding_dim': '16',
             'num_layers': '6',
@@ -52,37 +38,23 @@ if __name__ == '__main__':
             'dropout': '0.1',
         },
 
-        # {
-        #     'seq_length': '1024',
-        #     'embedding_dim': '8',
-        #     'num_layers': '6',
-        #     'num_heads': '4',
-        #     'dropout': '0.2',
-        #  },
-        #
-        # {
-        #     'seq_length': '1024',
-        #     'embedding_dim': '8',
-        #     'num_layers': '8',
-        #     'num_heads': '4',
-        #     'dropout': '0.2',
-        # },
-        #
-        # {
-        #     'seq_length': '1024',
-        #     'embedding_dim': '16',
-        #     'num_layers': '6',
-        #     'num_heads': '4',
-        #     'dropout': '0.2',
-        # },
-        #
-        # {
-        #     'seq_length': '1024',
-        #     'embedding_dim': '32',
-        #     'num_layers': '6',
-        #     'num_heads': '4',
-        #     'dropout': '0.2',
-        # },
+        {
+            'token_length': '3',
+            'seq_length': '512',
+            'embedding_dim': '32',
+            'num_layers': '6',
+            'num_heads': '4',
+            'dropout': '0.1',
+        },
+
+        {
+            'token_length': '4',
+            'seq_length': '512',
+            'embedding_dim': '64',
+            'num_layers': '6',
+            'num_heads': '4',
+            'dropout': '0.1',
+        },
     ]
 
     for param_dict in param_dict_list:
@@ -96,6 +68,9 @@ if __name__ == '__main__':
 
         sys.argv = [
             'protein_func_pred',
+
+            # Dataset parameters ##############################################
+            '--token_length', param_dict['token_length'],
 
             # Encoder parameters ##############################################
             '--seq_length', param_dict['seq_length'],
@@ -121,11 +96,11 @@ if __name__ == '__main__':
             '--lr', '0.0001',
             '--l2_regularization', '1e-5',
             '--lr_decay_factor', '0.9',
-            '--num_logs_per_epoch', '6',
+            '--num_logs_per_epoch', '10',
             '--early_stop_patience', '10',
 
             # Miscellaneous config ############################################
-            '--multi_gpu',
+            # '--multi_gpu',
             '--rand_state', '0', ]
 
         runpy.run_module('protein_func_pred')

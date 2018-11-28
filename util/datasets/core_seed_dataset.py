@@ -25,6 +25,7 @@ class CoreSEEDDataset(data.Dataset):
     def __init__(self,
                  training: bool,
                  data_root: str,
+                 token_strat: str,
                  token_length: int,
                  rand_state: int = 0,
                  max_seq_length: int = 1024):
@@ -79,9 +80,12 @@ class CoreSEEDDataset(data.Dataset):
             token_length=token_length,
             protein_seqs=dataframe['protein'])
 
+        trn_filename = 'CoreSEED_trn_tokenized_on_%s(%i).pkl' \
+                       % (token_strat, token_length)
+        val_filename = 'CoreSEED_val_tokenized_on_%s(%i).pkl' \
+                       % (token_strat, token_length)
         tokenized_protein_file_name = \
-            'CoreSEED_trn_tokenized_on_%i.pkl' % token_length if training \
-            else 'CoreSEED_val_tokenized_on_%i.pkl' % token_length
+            trn_filename if training else val_filename
 
         tokenized_protein_path = \
             os.path.join(data_root, tokenized_protein_file_name)

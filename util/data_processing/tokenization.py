@@ -360,10 +360,39 @@ def tokenize_protein(
             if k not in special_tokens.values() and len(k) > token_length:
                 token_length = len(k)
 
+        tokenized_protein_seqs = []
+
         if tokenize_strat == 'overlapping':
 
-            # TODO: overlapping tokenization
-            tokenized_protein_seqs = []
+            for ps in protein_seqs:
+
+                t = []
+
+                for curr_index in range(len(ps)):
+
+                    best_sub_seq = ''
+                    best_prob = 0.
+
+                    for j in range(1, token_length + 1):
+
+                        if curr_index + j > len(ps):
+                            break
+
+                        sub_seq = ps[curr_index: curr_index + j]
+
+                        if sub_seq in token_dict:
+
+                            prob = token_dict[sub_seq][1] ** (1. / j)
+
+                            if prob > best_prob:
+                                best_sub_seq = sub_seq
+                                best_prob = prob
+
+                    assert len(best_sub_seq) != 0
+                    t.append(token_dict[best_sub_seq][0])
+
+                # print(time.time() - start_time)
+                tokenized_protein_seqs.append(t)
 
         elif tokenize_strat == 'greedy':
 
@@ -399,7 +428,6 @@ def tokenize_protein(
             #     delayed(greedy_tokenize_one_protein_seq)(ps)
             #     for ps in protein_seqs)
 
-            tokenized_protein_seqs = []
             for ps in protein_seqs:
 
                 t = []
@@ -435,7 +463,7 @@ def tokenize_protein(
         elif tokenize_strat == 'optimal':
 
             # TODO: optimal tokenization
-            tokenized_protein_seqs = []
+            pass
 
         tokenized_protein_seqs = [[sos_token, ] + t + [eos_token, ]
                                   for t in tokenized_protein_seqs]
@@ -558,32 +586,34 @@ if __name__ == '__main__':
 
     total_protein_sequences = dataframe['protein']
     total_targets = dataframe['function']
-    target_token_dict = dict((f, i) for i, f in
-                             enumerate(sorted(set(total_targets))))
+    total_target_token_dict = dict((f, i) for i, f in
+                                   enumerate(sorted(set(total_targets))))
 
-    for protein_token_length in [1, 2, 3, 4]:
+    for protein_token_length in [5, 6]:
 
         protein_token_dict = get_protein_token_dict(
             '../../data/CoreSEED_%i_token_dict.json' % protein_token_length,
             token_length=protein_token_length,
             protein_seqs=total_protein_sequences)
 
-        protein_sequences, tokenized_protein_sequences, tokenized_targets = \
-            tokenize_protein(
-                '../../data/CoreSEED_trn_tokenized_on_%i.pkl'
-                % protein_token_length,
-                token_dict=protein_token_dict,
-                protein_seqs=total_protein_sequences,
-                tokenize_strat='greedy',
-                targets=total_targets,
-                target_token_dict=target_token_dict,
-                max_seq_length=512)
+        tokenize_strats = ['greedy', 'overlapping']
 
-        assert len(protein_sequences) == len(tokenized_protein_sequences)
-        assert len(protein_sequences) == len(tokenized_targets)
+        for tokenize_strat in tokenize_strats:
 
-        print(protein_sequences[0])
-        print(tokenized_protein_sequences[0])
-        # print(tokenized_targets)
-        print(len(target_token_dict))
+            protein_seqs, tokenized_protein_seqs, tokenized_targets = \
+                tokenize_protein(
+                    '../../data/CoreSEED_trn_tokenized_on_%s(%i).pkl'
+                    % (tokenize_strat, protein_token_length),
+                    token_dict=protein_token_dict,
+                    protein_seqs=total_protein_sequences,
+                    tokenize_strat=tokenize_strat,
+                    targets=total_targets,
+                    target_token_dict=total_target_token_dict,
+                    max_seq_length=512)
+
+            assert len(protein_seqs) == len(tokenized_protein_seqs)
+            assert len(protein_seqs) == len(tokenized_targets)
+
+            print(protein_seqs[0])
+            print(tokenized_targets[0])
 

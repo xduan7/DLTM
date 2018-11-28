@@ -92,9 +92,11 @@ def main():
         description='Protein function prediction with transformer encoder')
 
     # Dataset parameters ######################################################
+    parser.add_argument('--token_strat', type=str, default='greedy',
+                        help='protein sequence tokenization strategy')
     parser.add_argument('--token_length', type=int, default=1,
-                        help='max length of tokens for protein seq '
-                             'tokenization.')
+                        help='max length of tokens for protein sequence '
+                             'tokenization')
 
     # Encoder parameters ######################################################
     parser.add_argument('--seq_length', type=int, default=1024,

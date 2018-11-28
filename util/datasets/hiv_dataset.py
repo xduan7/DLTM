@@ -98,6 +98,8 @@ if __name__ == '__main__':
     m, d, t = dataset[-1]
     print(np.multiply(m, d))
 
+    print(len(dataset))
+
     print(m)
     print(d)
     print(t)

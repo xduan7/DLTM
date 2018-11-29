@@ -21,23 +21,23 @@ if __name__ == '__main__':
 
         # Baseline ############################################################
         {
-            'tokenize_strat': 'greedy',
-            'token_length': '1',
+            'token_strat': 'greedy',
+            'token_length': '4',
             'seq_length': '512',
-            'embedding_dim': '8',
+            'embedding_dim': '32',
             'num_layers': '6',
             'num_heads': '4',
             'dropout': '0.1',
         },
 
-        {
-            'token_length': '4',
-            'seq_length': '512',
-            'embedding_dim': '64',
-            'num_layers': '6',
-            'num_heads': '4',
-            'dropout': '0.1',
-        },
+        # {
+        #     'token_length': '4',
+        #     'seq_length': '512',
+        #     'embedding_dim': '64',
+        #     'num_layers': '6',
+        #     'num_heads': '4',
+        #     'dropout': '0.1',
+        # },
 
         # {
         #     'token_length': '2',
@@ -71,7 +71,7 @@ if __name__ == '__main__':
             'protein_func_pred',
 
             # Dataset parameters ##############################################
-            '--tokenize_strat', param_dict['tokenize_strat'],
+            '--token_strat', param_dict['token_strat'],
             '--token_length', param_dict['token_length'],
 
             # Encoder parameters ##############################################
@@ -95,9 +95,10 @@ if __name__ == '__main__':
             '--max_num_epochs', '500',
 
             '--optimizer', 'Adam',
-            '--lr', '0.0001',
+            '--lr', '0.0005',
             '--l2_regularization', '1e-5',
-            '--lr_decay_factor', '0.9',
+            '--lr_decay_factor', '0.95'
+                                 '',
             '--num_logs_per_epoch', '5',
             '--early_stop_patience', '10',
 

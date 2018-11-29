@@ -10,6 +10,7 @@
 import json
 import os
 import logging
+
 import numpy as np
 import pandas as pd
 import torch.utils.data as data
@@ -69,6 +70,8 @@ class CoreSEEDDataset(data.Dataset):
                 json.dump(function_token_dict, f,
                           indent=4, separators=(',', ': '))
 
+            del merged_dataframe, functions
+
             dataframe = trn_dataframe if training else val_dataframe
 
         protein_token_dict_path = \
@@ -90,7 +93,7 @@ class CoreSEEDDataset(data.Dataset):
         tokenized_protein_path = \
             os.path.join(data_root, tokenized_protein_file_name)
 
-        protein_sequences, tokenized_protein_sequences, tokenized_targets = \
+        _, tokenized_protein_sequences, tokenized_targets = \
             tokenize_protein(data_path=tokenized_protein_path,
                              token_dict=protein_token_dict,
                              protein_seqs=dataframe['protein'],
@@ -99,21 +102,21 @@ class CoreSEEDDataset(data.Dataset):
                              target_token_dict=function_token_dict,
                              max_seq_length=max_seq_length)
 
-        assert len(protein_sequences) == len(tokenized_protein_sequences)
-        assert len(protein_sequences) == len(tokenized_targets)
+        assert len(tokenized_targets) == len(tokenized_protein_sequences)
+        # assert len(protein_sequences) == len(tokenized_targets)
 
-        self.__len = len(protein_sequences)
+        self.__len = len(tokenized_targets)
         self.protein_token_dict = protein_token_dict
         self.function_token_dict = function_token_dict
 
         self.__tokenized_protein_sequences = \
             np.array(tokenized_protein_sequences).astype(np.int64)
         self.__tokenized_targets = \
-            np.array(tokenized_targets).astype(np.int64)
+            np.array(tokenized_targets).astype(np.int16)
 
         pad_token = protein_token_dict[SP_TOKENS['PAD']][0]
         self.__padding_mask = np.array(
-            (self.__tokenized_protein_sequences != pad_token)).astype(np.int64)
+            (self.__tokenized_protein_sequences != pad_token)).astype(np.int8)
 
     def __len__(self):
         """len(dataset)
@@ -142,16 +145,17 @@ class CoreSEEDDataset(data.Dataset):
                 np.array: indexed protein function
             )
         """
-        return self.__padding_mask[index], \
+        return self.__padding_mask[index].astype(np.int64), \
                self.__tokenized_protein_sequences[index], \
-               self.__tokenized_targets[index]
+               np.int64(self.__tokenized_targets[index])
 
 
 if __name__ == '__main__':
 
     dataset = CoreSEEDDataset(training=True,
                               data_root='../../data/',
-                              token_length=1,
+                              token_strat='greedy',
+                              token_length=4,
                               max_seq_length=512)
 
     print(dataset[0])

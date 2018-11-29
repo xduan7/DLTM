@@ -167,6 +167,7 @@ def main():
     # Data loaders for training/validation
     dataset_kwargs = {
         'data_root': './data/',
+        'token_strat': args.token_strat,
         'token_length': args.token_length,
         'rand_state': args.rand_state,
         'max_seq_length': args.seq_length, }

@@ -581,7 +581,7 @@ if __name__ == '__main__':
     # print(len(tst_smiles))
 
     # Protein sequence tokenization
-    dataframe = pd.read_csv('../../data/coreseed.train.tsv',
+    dataframe = pd.read_csv('../../data/coreseed.test.tsv',
                             sep='\t', usecols=['protein', 'function'])
 
     total_protein_sequences = dataframe['protein']
@@ -589,7 +589,7 @@ if __name__ == '__main__':
     total_target_token_dict = dict((f, i) for i, f in
                                    enumerate(sorted(set(total_targets))))
 
-    for protein_token_length in [5, 6]:
+    for protein_token_length in [1, 2, 3, 4, 5]:
 
         protein_token_dict = get_protein_token_dict(
             '../../data/CoreSEED_%i_token_dict.json' % protein_token_length,
@@ -602,7 +602,7 @@ if __name__ == '__main__':
 
             protein_seqs, tokenized_protein_seqs, tokenized_targets = \
                 tokenize_protein(
-                    '../../data/CoreSEED_trn_tokenized_on_%s(%i).pkl'
+                    '../../data/CoreSEED_val_tokenized_on_%s(%i).pkl'
                     % (tokenize_strat, protein_token_length),
                     token_dict=protein_token_dict,
                     protein_seqs=total_protein_sequences,

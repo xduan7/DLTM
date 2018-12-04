@@ -17,7 +17,8 @@ class Embedding(nn.Module):
                  emb_dim: int):
 
         super().__init__()
-        self.__embedding = nn.Embedding(dict_size, emb_dim)
+        self.__embedding = nn.Embedding(dict_size,
+                                        emb_dim)
 
     def forward(self, x):
 

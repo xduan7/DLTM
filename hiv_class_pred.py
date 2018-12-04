@@ -138,7 +138,7 @@ def main():
     parser.add_argument('--tst_batch_size', type=int, default=256,
                         help='input batch size for testing')
 
-    parser.add_argument('--max_num_epochs', type=int, default=100,
+    parser.add_argument('--max_num_epochs', type=int, default=250,
                         help='maximum number of epochs for training')
     parser.add_argument('--optimizer', type=str, default='SGD',
                         help='optimizer for transformer encoder training',
@@ -258,6 +258,9 @@ def main():
 
             test_acc, test_roc_score = \
                 validate(clf, device, tst_loader, printing=False)
+
+            print('\nTest Results: \t ROC-AUC Score: %.4f\n' % test_roc_score)
+
         else:
             patience += 1
 

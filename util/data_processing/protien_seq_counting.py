@@ -54,23 +54,25 @@ def count_protein_seq(
 
     # Iterate through all the protein sequences
     # Parallelized version
-    def featurize_protein_seq(p):
+    def featurize_protein_seq(p, fl):
 
-        featurized_p = np.zeros(len(feature_list)).astype(np.int16)
+        featurized_p = np.zeros(len(fl)).astype(np.int16)
         for i in range(0, len(p) - token_len + 1):
-            if p[i: i + token_len] in feature_list:
-                featurized_p[feature_list.index(p[i: i + token_len])] += 1
+            if p[i: i + token_len] in fl:
+                featurized_p[fl.index(p[i: i + token_len])] += 1
 
         if count_strat == 'frequency':
             featurized_p = np.array(
-                [(occ / (len(p) - len(feature_list[idx]) + 1))
+                [(occ / (len(p) - token_len + 1))
                  for idx, occ in enumerate(featurized_p)]).astype(np.float16)
 
         return featurized_p
 
+    start_time = time.time()
     num_cores = multiprocessing.cpu_count()
     featurized_protein_seqs = Parallel(n_jobs=num_cores)(
-        delayed(featurize_protein_seq)(p) for p in protein_seqs)
+        delayed(featurize_protein_seq)(p, feature_list) for p in protein_seqs)
+    print(time.time() - start_time)
 
     with open(data_path, 'wb') as f:
         pickle.dump(featurized_protein_seqs, f)
@@ -88,7 +90,7 @@ if __name__ == '__main__':
                                 sep='\t', usecols=['protein', 'function'])
     val_proteins = val_dataframe['protein']
 
-    for l in [ 3]:
+    for l in [3]:
 
         f_list = get_feature_list(l, trn_proteins)
 

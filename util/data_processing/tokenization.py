@@ -18,7 +18,7 @@ import numpy as np
 import pandas as pd
 import multiprocessing
 from rdkit import Chem
-from joblib import Parallel, delayed, parallel_backend
+from joblib import Parallel, delayed
 from deepchem.molnet import load_hiv, load_pcba
 
 from util.misc.path_creating import create_path

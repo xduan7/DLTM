@@ -221,12 +221,12 @@ if __name__ == '__main__':
         #  'l2_regularization': '1e-4'},
 
         {'pos_freq': '16.0',
-         'embedding_scale': '8.0',
-         'embedding_dim': '32',
-         'num_layers': '10',
+         'embedding_scale': '20.0',
+         'embedding_dim': '64',
+         'num_layers': '8',
          'num_heads': '4',
          'dropout': '0.1',
-         'l2_regularization': '1e-4'},
+         'l2_regularization': '1e-5'},
     ]
 
     for param_dict in param_dict_list:
@@ -242,7 +242,7 @@ if __name__ == '__main__':
             'hiv_class_pred',
 
             # Encoder parameters ##############################################
-            '--seq_length', '691',
+            '--seq_length', '700',
             '--pos_freq', param_dict['pos_freq'],
             '--embedding_scale', param_dict['embedding_scale'],
 
@@ -265,9 +265,9 @@ if __name__ == '__main__':
             '--optimizer', 'SGD',
             '--lr', '0.0001',
             '--l2_regularization', param_dict['l2_regularization'],
-            '--lr_decay_factor', '0.95',
+            '--lr_decay_factor', '0.98',
             '--num_logs_per_epoch', '5',
-            '--early_stop_patience', '10',
+            '--early_stop_patience', '25',
 
             # Miscellaneous config ############################################
             '--multi_gpu',

@@ -225,8 +225,25 @@ if __name__ == '__main__':
          'embedding_dim': '64',
          'num_layers': '8',
          'num_heads': '4',
+         'dropout': '0.0',
+         'l2_regularization': '0'},
+
+        {'pos_freq': '16.0',
+         'embedding_scale': '20.0',
+         'embedding_dim': '64',
+         'num_layers': '8',
+         'num_heads': '4',
          'dropout': '0.1',
-         'l2_regularization': '1e-5'},
+         'l2_regularization': '1e-4'},
+
+        {'pos_freq': '16.0',
+         'embedding_scale': '20.0',
+         'embedding_dim': '64',
+         'num_layers': '6',
+         'num_heads': '4',
+         'dropout': '0.1',
+         'l2_regularization': '1e-4'},
+
     ]
 
     for param_dict in param_dict_list:
@@ -262,8 +279,8 @@ if __name__ == '__main__':
             '--tst_batch_size', '256',
             '--max_num_epochs', '500',
 
-            '--optimizer', 'SGD',
-            '--lr', '0.0001',
+            '--optimizer', 'Adam',
+            '--lr', '0.00005',
             '--l2_regularization', param_dict['l2_regularization'],
             '--lr_decay_factor', '0.98',
             '--num_logs_per_epoch', '5',

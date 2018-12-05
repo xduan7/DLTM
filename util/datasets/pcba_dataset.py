@@ -1,8 +1,8 @@
 """ 
-    File Name:          DLTM/hiv_dataset.py
+    File Name:          DLTM/pcba_dataset.py
     Author:             Xiaotian Duan (xduan7)
     Email:              xduan7@uchicago.edu
-    Date:               11/21/18
+    Date:               12/5/18
     Python Version:     3.6.6
     File Description:   
 
@@ -11,7 +11,7 @@
 import logging
 import numpy as np
 import torch.utils.data as data
-from deepchem.molnet import load_hiv
+from deepchem.molnet import load_pcba
 
 from util.data_processing.tokenization import get_smiles_token_dict, \
     tokenize_smiles
@@ -19,7 +19,7 @@ from util.data_processing.tokenization import get_smiles_token_dict, \
 logger = logging.getLogger(__name__)
 
 
-class HIVDataset(data.Dataset):
+class PCBADataset(data.Dataset):
 
     def __init__(self,
                  token_dict_path: str,
@@ -28,13 +28,13 @@ class HIVDataset(data.Dataset):
                  rand_state: int = 0,
 
                  tokenize_on: str = 'atom',
-                 max_seq_length: int = 128):
+                 max_seq_length: int = 256):
 
         assert dataset_usage in ['training', 'validation', 'test']
         self.__rand_state = rand_state
 
         tasks, (trn, val, tst), transformers = \
-            load_hiv(featurizer='Raw', split='scaffold', reload=True)
+            load_pcba(featurizer='Raw', split='random', reload=True)
 
         # seq_length = 0
         # for i in (list(trn.ids) + list(val.ids) + list(tst.ids)):
@@ -73,7 +73,10 @@ class HIVDataset(data.Dataset):
 
         # Convert the data and target type to int64 to work with PyTorch
         self.__data = np.array(tokenized_smiles).astype(np.int64)
-        self.__targets = np.array(targets).reshape(-1, 1).astype(np.float32)
+        self.__targets = np.array(targets).astype(np.float32)
+
+        print(self.__data.shape)
+        print(self.__targets.shape)
 
         self.__len = len(self.__data)
 
@@ -87,13 +90,12 @@ class HIVDataset(data.Dataset):
 
 
 if __name__ == '__main__':
-
-    dataset = HIVDataset(
-        token_dict_path='../../data/HIV_atom_token_dict.json',
-        tokenized_data_path='../../data/HIV_trn_tokenized_on_atom.pkl',
+    dataset = PCBADataset(
+        token_dict_path='../../data/PCBA_atom_token_dict.json',
+        tokenized_data_path='../../data/PCBA_trn_tokenized_on_atom.pkl',
         dataset_usage='training')
 
-    m, d, t = dataset[-1]
+    m, d, t = dataset[-2]
     print(np.multiply(m, d))
 
     print(len(dataset))

@@ -118,5 +118,5 @@ if __name__ == '__main__':
                                   data_file_name='dtc.train.filtered.txt',
                                   training=True)
     m, d, t = dataset[-1]
-
+    print(t)
     print(np.multiply(m, d))

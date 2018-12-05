@@ -35,5 +35,4 @@ class EncoderClf(nn.Module):
         # Make sure that the mask match the embedded structure
         encoder_output = self.__encoder(indexed_sentences, mask.unsqueeze(-2))
 
-        # Log softmax output
         return self.__output_module(encoder_output.view(batch_size, -1))

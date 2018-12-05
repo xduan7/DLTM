@@ -150,6 +150,7 @@ def tokenize_smiles(
         data_path: str,
         token_dict: dict,
         smiles_strings: iter,
+        targets: iter = None,
         max_seq_length: int = 128,
         reload_from_disk: bool = True):
     """smiles, tokenized_smiles = \
@@ -255,13 +256,20 @@ def tokenize_smiles(
     ret_tokenized_smiles_strings = \
         [t + [token_dict[special_tokens['PAD']], ] * (max_seq_length - len(t))
          for t in tokenized_smiles_strings if len(t) <= max_seq_length]
+    if targets is not None:
+        assert len(targets) == len(smiles_strings)
+        ret_targets = [i for i, j in zip(targets, tokenized_smiles_strings)
+                       if len(j) <= max_seq_length]
+        assert len(ret_targets) == len(ret_smiles_strings)
+    else:
+        ret_targets = None
 
     logger.warning('Keeping %i out of %i (%.2f%%) SMILES strings due to '
                    'maximum length limitation.'
                    % (len(ret_smiles_strings), len(smiles_strings),
                       100. * len(ret_smiles_strings)/len(smiles_strings)))
 
-    return ret_smiles_strings, ret_tokenized_smiles_strings
+    return ret_smiles_strings, ret_tokenized_smiles_strings, ret_targets
 
 
 def get_protein_token_dict(

@@ -220,29 +220,37 @@ if __name__ == '__main__':
         #  'dropout': '0.2',
         #  'l2_regularization': '1e-4'},
 
-        {'pos_freq': '16.0',
-         'embedding_scale': '20.0',
-         'embedding_dim': '64',
-         'num_layers': '8',
-         'num_heads': '4',
-         'dropout': '0.0',
-         'l2_regularization': '0'},
+        # {'pos_freq': '16.0',
+        #  'embedding_scale': '20.0',
+        #  'embedding_dim': '64',
+        #  'num_layers': '8',
+        #  'num_heads': '4',
+        #  'dropout': '0.0',
+        #  'l2_regularization': '0'},
 
         {'pos_freq': '16.0',
          'embedding_scale': '20.0',
-         'embedding_dim': '64',
-         'num_layers': '8',
-         'num_heads': '4',
-         'dropout': '0.1',
-         'l2_regularization': '1e-4'},
-
-        {'pos_freq': '16.0',
-         'embedding_scale': '20.0',
-         'embedding_dim': '64',
+         'embedding_dim': '32',
          'num_layers': '6',
          'num_heads': '4',
          'dropout': '0.1',
+         'l2_regularization': '1e-5'},
+
+        {'pos_freq': '16.0',
+         'embedding_scale': '20.0',
+         'embedding_dim': '32',
+         'num_layers': '6',
+         'num_heads': '4',
+         'dropout': '0.2',
          'l2_regularization': '1e-4'},
+
+        {'pos_freq': '16.0',
+         'embedding_scale': '20.0',
+         'embedding_dim': '32',
+         'num_layers': '4',
+         'num_heads': '4',
+         'dropout': '0.1',
+         'l2_regularization': '1e-5'},
 
     ]
 
@@ -280,11 +288,11 @@ if __name__ == '__main__':
             '--max_num_epochs', '500',
 
             '--optimizer', 'Adam',
-            '--lr', '0.00005',
+            '--lr', '0.00004',
             '--l2_regularization', param_dict['l2_regularization'],
             '--lr_decay_factor', '0.98',
             '--num_logs_per_epoch', '5',
-            '--early_stop_patience', '25',
+            '--early_stop_patience', '20',
 
             # Miscellaneous config ############################################
             '--multi_gpu',

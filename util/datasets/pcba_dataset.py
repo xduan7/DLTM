@@ -58,6 +58,8 @@ class PCBADataset(data.Dataset):
             smiles = tst.ids
             targets = tst.y
 
+        targets = np.argmax(targets, axis=1)
+
         self.__smiles, tokenized_smiles, targets = tokenize_smiles(
             data_path=tokenized_data_path,
             token_dict=token_dict,
@@ -73,10 +75,7 @@ class PCBADataset(data.Dataset):
 
         # Convert the data and target type to int64 to work with PyTorch
         self.__data = np.array(tokenized_smiles).astype(np.int64)
-        self.__targets = np.array(targets).astype(np.float32)
-
-        print(self.__data.shape)
-        print(self.__targets.shape)
+        self.__targets = np.array(targets).astype(np.int64)
 
         self.__len = len(self.__data)
 
@@ -93,7 +92,7 @@ if __name__ == '__main__':
     dataset = PCBADataset(
         token_dict_path='../../data/PCBA_atom_token_dict.json',
         tokenized_data_path='../../data/PCBA_trn_tokenized_on_atom.pkl',
-        dataset_usage='training')
+        dataset_usage='validation')
 
     m, d, t = dataset[-2]
     print(np.multiply(m, d))

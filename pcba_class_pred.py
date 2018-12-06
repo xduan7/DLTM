@@ -17,7 +17,9 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 import numpy as np
-from sklearn.metrics import roc_auc_score
+from deepchem.metrics import prc_auc_score
+from sklearn.metrics import roc_auc_score, auc, precision_recall_curve, \
+    precision_score, recall_score, precision_recall_fscore_support
 from torch.optim.lr_scheduler import LambdaLR
 
 from networks.encoder_clf import EncoderClf
@@ -62,7 +64,8 @@ def validate(clf, device, val_loader, printing=True):
     val_correct = 0
 
     y_true = np.array([])
-    y_score = np.array([])
+    y_prob = np.array([]).reshape(0, 128)
+    y_pred = np.array([])
 
     with torch.no_grad():
 
@@ -82,22 +85,53 @@ def validate(clf, device, val_loader, printing=True):
 
             y_true = np.concatenate(
                 (y_true, target.cpu().numpy().reshape(-1)), axis=0)
-            y_score = np.concatenate(
-                (y_score, output.cpu().numpy().reshape(-1)), axis=0)
+            y_prob = np.concatenate(
+                (y_prob, output.cpu().numpy().reshape(-1, 128)), axis=0)
+            y_pred = np.concatenate(
+                (y_pred, prediction.cpu().numpy().reshape(-1)), axis=0)
 
     val_loss /= len(val_loader.dataset)
     val_acc = val_correct / len(val_loader.dataset)
-    roc_score = roc_auc_score(y_true=y_true, y_score=y_score)
+
+    # Covnert to one vs all classification
+    # Calculate the mean of AUC (either PRC AUC or ROC AUC)
+    pr_auc_scores = []
+
+    for l in np.unique(y_true):
+
+
+        y_true_tmp = [1 if y == l else 0 for y in y_true]
+        y_prob_tmp = y_prob[:, int(l)]
+
+        precision, recall, _ = precision_recall_curve(
+            y_true=y_true_tmp, probas_pred=y_prob_tmp)
+
+        tmp_score = auc(recall, precision)
+        pr_auc_scores.append(tmp_score)
+
+    pr_auc_score = np.mean(pr_auc_scores)
+
+    # print(y_true.shape)
+    # print(y_true[0:5])
+    # print(y_pred.shape)
+    # print(y_pred[0:5])
+    #
+    # precision = precision_score(y_true, y_pred, average=None)
+    # recall = recall_score(y_true, y_pred, average=None)
+
+    # precision, recall, _, _ = precision_recall_fscore_support(
+    #     y_true, y_pred, average=None)
+    # pr_auc_score = auc(recall, precision)
 
     if printing:
         print('\nValidation Results: \n'
               '\t Average Loss: %.4f, '
               '\t Accuracy: %6i/%6i (%.1f%%), '
-              '\t ROC-AUC Score: %.4f\n'
+              '\t PR-AUC Score: %.4f\n'
               % (val_loss, val_correct, len(val_loader.dataset),
-                 100. * val_acc, roc_score))
+                 100. * val_acc, pr_auc_score))
 
-    return val_acc, roc_score
+    return val_acc, pr_auc_score
 
 
 def main():
@@ -106,15 +140,15 @@ def main():
         description='PCBA class prediction with transformer encoder')
 
     # Encoder parameters ######################################################
-    parser.add_argument('--seq_length', type=int, default=256,
+    parser.add_argument('--seq_length', type=int, default=300,
                         help='max length for training/testing SMILES strings')
-    parser.add_argument('--pos_freq', type=float, default=4.0,
+    parser.add_argument('--pos_freq', type=float, default=16.0,
                         help='frequency for positional encoding')
     parser.add_argument('--embedding_scale', type=float, default=16.0,
                         help='scale of word embedding to positional encoding')
     parser.add_argument('--embedding_dim', type=int, default=32,
                         help='embedding and model dimension')
-    parser.add_argument('--num_layers', type=int, default=4,
+    parser.add_argument('--num_layers', type=int, default=6,
                         help='number of encoding layers in encoder')
     parser.add_argument('--num_heads', type=int, default=4,
                         help='number of heads in multi-head attention layer')
@@ -143,9 +177,9 @@ def main():
     parser.add_argument('--optimizer', type=str, default='SGD',
                         help='optimizer for transformer encoder training',
                         choices=['SGD', 'RMSprop', 'Adam'])
-    parser.add_argument('--lr', type=float, default=0.0001,
+    parser.add_argument('--lr', type=float, default=0.001,
                         help='learning rate of the optimizer')
-    parser.add_argument('--l2_regularization', type=float, default=1e-4,
+    parser.add_argument('--l2_regularization', type=float, default=1e-5,
                         help='L2 regularization for nn weights')
     parser.add_argument('--lr_decay_factor', type=float, default=1.0,
                         help='decay factor for learning rate')
@@ -225,7 +259,7 @@ def main():
                       ff_dropout=args.ff_dropout,
                       enc_dropout=args.enc_dropout).to(device)
     output_layer = nn.Sequential(
-        nn.Linear(args.embedding_dim * args.seq_length, 1)).to(device)
+        nn.Linear(args.embedding_dim * args.seq_length, 128)).to(device)
 
     clf = EncoderClf(encoder=encoder, output_module=output_layer)
     if args.multi_gpu:

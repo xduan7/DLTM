@@ -18,13 +18,24 @@ from util.misc.tee import Tee
 if __name__ == '__main__':
 
     param_dict_list = [
+
+
+        # {'pos_freq': '16.0',
+        #  'embedding_scale': '16.0',
+        #  'embedding_dim': '32',
+        #  'num_layers': '6',
+        #  'num_heads': '4',
+        #  'dropout': '0.1',
+        #  'l2_regularization': '1e-5'},
+
         {'pos_freq': '16.0',
          'embedding_scale': '16.0',
          'embedding_dim': '64',
          'num_layers': '6',
          'num_heads': '4',
-         'dropout': '0.1',
-         'l2_regularization': '1e-5'},
+         'dropout': '0.0',
+         'l2_regularization': '0'},
+
     ]
 
     for param_dict in param_dict_list:
@@ -40,7 +51,7 @@ if __name__ == '__main__':
             'pcba_class_pred',
 
             # Encoder parameters ##############################################
-            '--seq_length', '700',
+            '--seq_length', '256',
             '--pos_freq', param_dict['pos_freq'],
             '--embedding_scale', param_dict['embedding_scale'],
 
@@ -63,9 +74,9 @@ if __name__ == '__main__':
             '--optimizer', 'Adam',
             '--lr', '0.0001',
             '--l2_regularization', param_dict['l2_regularization'],
-            '--lr_decay_factor', '0.98',
+            '--lr_decay_factor', '0.95',
             '--num_logs_per_epoch', '5',
-            '--early_stop_patience', '25',
+            '--early_stop_patience', '10',
 
             # Miscellaneous config ############################################
             '--multi_gpu',

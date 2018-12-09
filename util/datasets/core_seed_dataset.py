@@ -93,14 +93,14 @@ class CoreSEEDDataset(data.Dataset):
         tokenized_protein_path = \
             os.path.join(data_root, tokenized_protein_file_name)
 
-        _, tokenized_protein_sequences, tokenized_targets = \
-            tokenize_protein(data_path=tokenized_protein_path,
-                             token_dict=protein_token_dict,
-                             protein_seqs=dataframe['protein'],
-                             tokenize_strat='greedy',
-                             targets=dataframe['function'],
-                             target_token_dict=function_token_dict,
-                             max_seq_length=max_seq_length)
+        protein_token_dict, _, tokenized_protein_sequences, tokenized_targets \
+            = tokenize_protein(data_path=tokenized_protein_path,
+                               token_dict=protein_token_dict,
+                               protein_seqs=dataframe['protein'],
+                               tokenize_strat='greedy',
+                               targets=dataframe['function'],
+                               target_token_dict=function_token_dict,
+                               max_seq_length=max_seq_length)
 
         assert len(tokenized_targets) == len(tokenized_protein_sequences)
         # assert len(protein_sequences) == len(tokenized_targets)
@@ -151,7 +151,6 @@ class CoreSEEDDataset(data.Dataset):
 
 
 if __name__ == '__main__':
-
     dataset = CoreSEEDDataset(training=True,
                               data_root='../../data/',
                               token_strat='greedy',

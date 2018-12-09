@@ -347,11 +347,12 @@ def tokenize_protein(
         reload_from_disk: bool = True):
 
     special_tokens = SP_TOKENS
-    assert tokenize_strat in ['overlapping', 'greedy', 'optimal']
+    assert tokenize_strat in ['overlapping', 'greedy', 'hybrid', 'optimal']
 
     sos_token = token_dict[special_tokens['SOS']][0]
     eos_token = token_dict[special_tokens['EOS']][0]
     pad_token = token_dict[special_tokens['PAD']][0]
+    unk_token = token_dict[special_tokens['UNK']][0]
 
     # Load the tokenized protein sequences if the data file exists
     if os.path.exists(data_path) and reload_from_disk:
@@ -371,6 +372,28 @@ def tokenize_protein(
         tokenized_protein_seqs = []
 
         if tokenize_strat == 'overlapping':
+
+            token_dict = dict((k, v) for k, v in token_dict.items()
+                              if len(k) == token_length or
+                              k in special_tokens.values())
+
+            for ps in protein_seqs:
+
+                t = []
+
+                for curr_index in range(len(ps) - token_length):
+
+                    sub_seq = ps[curr_index: curr_index + token_length]
+
+                    if sub_seq in token_dict:
+                        t.append(token_dict[sub_seq][0])
+                    else:
+                        t.append(unk_token)
+
+                # print(time.time() - start_time)
+                tokenized_protein_seqs.append(t)
+
+        elif tokenize_strat == 'hybrid':
 
             for ps in protein_seqs:
 
@@ -505,7 +528,8 @@ def tokenize_protein(
         [target_token_dict[t] for t, p in zip(targets, tokenized_protein_seqs)
          if len(p) <= max_seq_length]
 
-    return ret_protein_seqs, ret_tokenized_protein_seqs, ret_tokenized_targets
+    return token_dict, ret_protein_seqs, ret_tokenized_protein_seqs, \
+        ret_tokenized_targets
 
 
 if __name__ == '__main__':
@@ -589,7 +613,7 @@ if __name__ == '__main__':
     # print(len(tst_smiles))
 
     # Protein sequence tokenization
-    dataframe = pd.read_csv('../../data/coreseed.test.tsv',
+    dataframe = pd.read_csv('../../data/coreseed.train.tsv',
                             sep='\t', usecols=['protein', 'function'])
 
     total_protein_sequences = dataframe['protein']
@@ -597,20 +621,20 @@ if __name__ == '__main__':
     total_target_token_dict = dict((f, i) for i, f in
                                    enumerate(sorted(set(total_targets))))
 
-    for protein_token_length in [1, 2, 3, 4, 5]:
+    for protein_token_length in [1, 2, 3, 4]:
 
         protein_token_dict = get_protein_token_dict(
             '../../data/CoreSEED_%i_token_dict.json' % protein_token_length,
             token_length=protein_token_length,
             protein_seqs=total_protein_sequences)
 
-        tokenize_strats = ['greedy', 'overlapping']
+        tokenize_strats = ['greedy', 'hybrid', 'overlapping']
 
         for tokenize_strat in tokenize_strats:
 
             protein_seqs, tokenized_protein_seqs, tokenized_targets = \
                 tokenize_protein(
-                    '../../data/CoreSEED_val_tokenized_on_%s(%i).pkl'
+                    '../../data/CoreSEED_trn_tokenized_on_%s(%i).pkl'
                     % (tokenize_strat, protein_token_length),
                     token_dict=protein_token_dict,
                     protein_seqs=total_protein_sequences,

@@ -43,15 +43,49 @@ if __name__ == '__main__':
         # },
 
         {
-            'token_strat': 'greedy',
-            'token_length': '4',
-            'seq_length': '512',
-            'embedding_dim': '64',
-            'num_layers': '6',
+            'token_strat': 'overlapping',
+            'token_length': '3',
+            'seq_length': '1024',
+            'embedding_dim': '32',
+            'num_layers': '4',
             'num_heads': '4',
             'dropout': '0.1',
             'l2_regularization': '1e-5',
         },
+
+        {
+            'token_strat': 'hybrid',
+            'token_length': '3',
+            'seq_length': '1024',
+            'embedding_dim': '32',
+            'num_layers': '4',
+            'num_heads': '4',
+            'dropout': '0.1',
+            'l2_regularization': '1e-5',
+        },
+
+        {
+            'token_strat': 'overlapping',
+            'token_length': '4',
+            'seq_length': '1024',
+            'embedding_dim': '32',
+            'num_layers': '4',
+            'num_heads': '4',
+            'dropout': '0.1',
+            'l2_regularization': '1e-5',
+        },
+
+        {
+            'token_strat': 'hybrid',
+            'token_length': '4',
+            'seq_length': '1024',
+            'embedding_dim': '32',
+            'num_layers': '4',
+            'num_heads': '4',
+            'dropout': '0.1',
+            'l2_regularization': '1e-5',
+        },
+
         #
         # {
         #     'token_strat': 'greedy',
@@ -110,7 +144,7 @@ if __name__ == '__main__':
             '--early_stop_patience', '5',
 
             # Miscellaneous config ############################################
-            # '--multi_gpu',
+            '--multi_gpu',
             '--rand_state', '0', ]
 
         runpy.run_module('protein_func_pred')

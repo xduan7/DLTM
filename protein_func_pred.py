@@ -93,7 +93,8 @@ def main():
 
     # Dataset parameters ######################################################
     parser.add_argument('--token_strat', type=str, default='greedy',
-                        help='protein sequence tokenization strategy')
+                        help='protein sequence tokenization strategy',
+                        choices=['overlapping', 'greedy', 'hybrid', 'optimal'])
     parser.add_argument('--token_length', type=int, default=1,
                         help='max length of tokens for protein sequence '
                              'tokenization')

@@ -28,13 +28,13 @@ if __name__ == '__main__':
         #  'dropout': '0.1',
         #  'l2_regularization': '1e-5'},
 
-        {'pos_freq': '16.0',
-         'embedding_scale': '16.0',
-         'embedding_dim': '64',
-         'num_layers': '6',
+        {'pos_freq': '32.0',
+         'embedding_scale': '32.0',
+         'embedding_dim': '8',
+         'num_layers': '2',
          'num_heads': '4',
-         'dropout': '0.0',
-         'l2_regularization': '0'},
+         'dropout': '0.1',
+         'l2_regularization': '1e-5'},
 
     ]
 
@@ -72,7 +72,7 @@ if __name__ == '__main__':
             '--max_num_epochs', '500',
 
             '--optimizer', 'Adam',
-            '--lr', '0.0001',
+            '--lr', '0.001',
             '--l2_regularization', param_dict['l2_regularization'],
             '--lr_decay_factor', '0.95',
             '--num_logs_per_epoch', '5',

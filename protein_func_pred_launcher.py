@@ -42,38 +42,38 @@ if __name__ == '__main__':
         #     'l2_regularization': '1e-5',
         # },
 
-        {
-            'token_strat': 'overlapping',
-            'token_length': '3',
-            'seq_length': '1024',
-            'embedding_dim': '32',
-            'num_layers': '4',
-            'num_heads': '4',
-            'dropout': '0.1',
-            'l2_regularization': '1e-5',
-        },
+        # {
+        #     'token_strat': 'overlapping',
+        #     'token_length': '3',
+        #     'seq_length': '1024',
+        #     'embedding_dim': '16',
+        #     'num_layers': '4',
+        #     'num_heads': '4',
+        #     'dropout': '0.1',
+        #     'l2_regularization': '1e-5',
+        # },
 
-        {
-            'token_strat': 'hybrid',
-            'token_length': '3',
-            'seq_length': '1024',
-            'embedding_dim': '32',
-            'num_layers': '4',
-            'num_heads': '4',
-            'dropout': '0.1',
-            'l2_regularization': '1e-5',
-        },
+        # {
+        #     'token_strat': 'hybrid',
+        #     'token_length': '3',
+        #     'seq_length': '1024',
+        #     'embedding_dim': '32',
+        #     'num_layers': '4',
+        #     'num_heads': '4',
+        #     'dropout': '0.1',
+        #     'l2_regularization': '1e-5',
+        # },
 
-        {
-            'token_strat': 'overlapping',
-            'token_length': '4',
-            'seq_length': '1024',
-            'embedding_dim': '32',
-            'num_layers': '4',
-            'num_heads': '4',
-            'dropout': '0.1',
-            'l2_regularization': '1e-5',
-        },
+        # {
+        #     'token_strat': 'overlapping',
+        #     'token_length': '4',
+        #     'seq_length': '1024',
+        #     'embedding_dim': '32',
+        #     'num_layers': '4',
+        #     'num_heads': '4',
+        #     'dropout': '0.1',
+        #     'l2_regularization': '1e-5',
+        # },
 
         {
             'token_strat': 'hybrid',
@@ -132,10 +132,10 @@ if __name__ == '__main__':
 
             # Training/validation parameters ##################################
             '--trn_batch_size', '32',
-            '--val_batch_size', '256',
+            '--val_batch_size', '32',
             '--max_num_epochs', '500',
 
-            '--optimizer', 'RMSprop',
+            '--optimizer', 'Adam',
             '--lr', '0.001',
             '--l2_regularization', param_dict['l2_regularization'],
             '--lr_decay_factor', '0.98'

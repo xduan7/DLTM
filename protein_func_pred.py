@@ -10,6 +10,7 @@
 
 import json
 import argparse
+import time
 
 import torch
 import torch.nn as nn
@@ -228,6 +229,8 @@ def main():
 
     for epoch in range(1, args.max_num_epochs + 1):
 
+        start_time = time.time()
+
         print('Epoch %3i: ' % epoch)
 
         train(clf, device, trn_loader, optimizer, args.num_logs_per_epoch)
@@ -243,6 +246,8 @@ def main():
             break
 
         lr_decay.step(epoch)
+
+        print('Epoch Running time: %.2f s\n' % (time.time() - start_time))
         print('=' * 80 + '\n')
 
     print('Best Accuracy: %.2f%%' % (100. * best_acc))

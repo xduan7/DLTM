@@ -17,13 +17,11 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 import numpy as np
-from deepchem.metrics import prc_auc_score
-from sklearn.metrics import roc_auc_score, auc, precision_recall_curve, \
-    precision_score, recall_score, precision_recall_fscore_support
+from sklearn.metrics import auc, precision_recall_curve
 from torch.optim.lr_scheduler import LambdaLR
 
 from networks.encoder_clf import EncoderClf
-from networks.modules.encoder import Encoder
+from networks.transformer.transformer import Encoder
 from util.datasets.pcba_dataset import PCBADataset
 from util.misc.optimizer import get_optimizer
 from util.misc.rand_state_seeding import seed_random_state

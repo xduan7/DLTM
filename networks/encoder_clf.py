@@ -8,9 +8,8 @@
 
 """
 import torch.nn as nn
-import torch.nn.functional as F
 
-from networks.modules.encoder import Encoder
+from networks.transformer.transformer import Encoder
 
 
 class EncoderClf(nn.Module):

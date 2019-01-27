@@ -10,8 +10,8 @@
 import torch.nn as nn
 import torch.nn.functional as F
 
-from networks.modules.embedding import Embedding
-from networks.modules.positional_encoder import PositionalEncoder
+from networks.transformer.transformer import Embedding
+from networks.transformer.transformer import PositionalEncoder
 
 
 class DenseClf(nn.Module):

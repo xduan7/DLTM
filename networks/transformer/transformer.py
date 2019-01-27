@@ -10,8 +10,8 @@
 import torch.nn as nn
 import torch.nn.functional as F
 
-from networks.modules.decoder import Decoder
-from networks.modules.encoder import Encoder
+from networks.transformer.decoder import Decoder
+from networks.transformer.encoder import Encoder
 
 
 class Transformer(nn.Module):
@@ -64,7 +64,8 @@ class Transformer(nn.Module):
     def forward(self,
                 src_indexed_sentence,
                 trg_indexed_sentence,
-                src_mask, trg_mask):
+                src_mask,
+                trg_mask):
 
         enc_out = self.__encoder(src_indexed_sentence, src_mask),
         h = self.__decoder(trg_indexed_sentence, enc_out, src_mask, trg_mask)

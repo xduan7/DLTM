@@ -1,5 +1,5 @@
 """ 
-    File Name:          DLTM/encoder.py
+    File Name:          DLTM/decoder.py
     Author:             Xiaotian Duan (xduan7)
     Email:              xduan7@uchicago.edu
     Date:               11/8/18
@@ -9,13 +9,12 @@
 """
 import torch.nn as nn
 
-from networks.modules.embedding import Embedding
-from networks.modules.encoder_layer import EncoderLayer
-from networks.modules.positional_encoder import PositionalEncoder
+from networks.transformer.transformer import Embedding
+from networks.transformer.transformer import DecoderLayer
+from networks.transformer.transformer import PositionalEncoder
 
 
-class Encoder(nn.Module):
-
+class Decoder(nn.Module):
     def __init__(self,
                  dict_size: int,
                  seq_length: int,
@@ -47,8 +46,8 @@ class Encoder(nn.Module):
                               dropout=pe_dropout,
                               base_feq=base_feq)
 
-        self.__encoder_layers = nn.ModuleList(
-            [EncoderLayer(emb_dim=emb_dim,
+        self.__decoder_layers = nn.ModuleList(
+            [DecoderLayer(emb_dim=emb_dim,
                           num_heads=num_heads,
                           ff_mid_dim=ff_mid_dim,
                           mha_dropout=mha_dropout,
@@ -59,10 +58,10 @@ class Encoder(nn.Module):
         self.__output_norm = nn.LayerNorm(normalized_shape=emb_dim,
                                           eps=epsilon)
 
-    def forward(self, src_indexed_sentence, src_mask):
+    def forward(self, trg_indexed_sentence, encoder_output,
+                src_mask, trg_mask):
 
-        h = self.__positional_encoder(self.__embedding(src_indexed_sentence))
-        for encoder_layer in self.__encoder_layers:
-            h = encoder_layer(h, src_mask)
-
+        h = self.__positional_encoder(self.__embedding(trg_indexed_sentence))
+        for decoder_layer in self.__decoder_layers:
+            h = decoder_layer(h, encoder_output, src_mask, trg_mask)
         return self.__output_norm(h)

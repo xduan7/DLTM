@@ -19,7 +19,7 @@ import pandas as pd
 from torch.optim.lr_scheduler import LambdaLR
 
 from networks.encoder_clf import EncoderClf
-from networks.modules.encoder import Encoder
+from networks.transformer.transformer import Encoder
 from util.datasets.masked_smiles_dataset import MaskedSMILESDataset
 from util.misc.optimizer import get_optimizer
 from util.misc.rand_state_seeding import seed_random_state

@@ -9,9 +9,9 @@
 """
 import torch.nn as nn
 
-from networks.transformer.transformer import Embedding
-from networks.transformer.transformer import EncoderLayer
-from networks.transformer.transformer import PositionalEncoder
+from networks.transformer.embedding import Embedding
+from networks.transformer.encoder_layer import EncoderLayer
+from networks.transformer.positional_encoder import PositionalEncoder
 
 
 class Encoder(nn.Module):

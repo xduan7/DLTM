@@ -9,8 +9,8 @@
 """
 import torch.nn as nn
 
-from networks.transformer.transformer import FeedForward
-from networks.transformer.transformer import MultiHeadAttention
+from networks.transformer.feed_forward import FeedForward
+from networks.transformer.multi_head_attention import MultiHeadAttention
 
 
 class EncoderLayer(nn.Module):

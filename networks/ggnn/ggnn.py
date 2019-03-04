@@ -73,6 +73,7 @@ class GGNN(nn.Module):
         :param adj_matrix:
             [batch_size, num_nodes, num_nodes * num_edge_types * 2]
         :return:
+            [batch_size, num_node]
         """
 
         curr_state = init_state

@@ -44,7 +44,6 @@ class Propagator(nn.Module):
                 adj_matrix):
         """
 
-
         :param in_states:
             [batch_size, num_nodes * num_edge_types, state_dim]
         :param out_states:
